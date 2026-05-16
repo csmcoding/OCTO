@@ -357,3 +357,21 @@ ThreeScene.jsx updates:
 - Changes: backend/tests/test_build_tree.py, backend/conftest.py (adds project root to sys.path so `from backend.*` imports resolve when pytest runs from backend/)
 - Risks: none
 - Next: YOU — commit, copy tree.json, then run PROMPT 5 (frontend scaffold)
+
+---
+
+## SCAFFOLD HANDOFF
+- Goal: Vite + React + Three.js scaffold running with no errors
+- Verified: npm run dev shows black screen + loading text, no console errors
+- Changes: frontend/ (full scaffold), frontend/public/tree.json copied
+- Risks: if tree.json is missing from public/, ThreeScene will 404
+- Next: PROMPT 6 — Three.js radial scene
+
+---
+
+## SCENE HANDOFF
+- Goal: 3D radial scene renders with zoom-out animation and ring of children
+- Verified: camera animation plays, ring visible, no console errors
+- Changes: ThreeScene.jsx, buildRingLayout.js, Dashboard.jsx (updated)
+- Risks: ring may be empty if tree.json has no children at root level
+- Next: PROMPT 7 — node meshes + glow
