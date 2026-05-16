@@ -1,0 +1,37 @@
+---
+description: Stack conventions for octopus-dashboard
+globs: ["**/*.py", "**/*.jsx", "**/*.js", "**/*.ts", "**/*.tsx"]
+---
+
+# Stack rules
+
+## Python (backend)
+- Use Python 3.11+ only
+- stdlib only: os, pathlib, subprocess, json, uuid
+- No third-party packages without explicit approval in CLAUDE.md
+- Use pathlib.Path instead of os.path wherever possible
+- Use type hints on every function signature
+- Format: one function per file is fine, no need to over-abstract
+
+## React / JavaScript (frontend)
+- React 18 with functional components only — no class components
+- State management: useState and useContext only — no Redux, no Zustand
+- Side effects: useEffect only — no lifecycle hacks
+- Three.js scenes: always use @react-three/fiber (r3f) Canvas wrapper
+  Do not instantiate THREE.Scene manually
+- Drei helpers: use @react-three/drei for Text, OrbitControls, Line
+- File naming:
+  - Components: PascalCase (e.g. ThreeScene.jsx, NodeMesh.jsx)
+  - Utilities: camelCase (e.g. buildRingLayout.js, loadTree.js)
+  - Tests: same name + .test.js (e.g. buildRingLayout.test.js)
+
+## Styling
+- Use inline styles for Three.js overlay UI (Panel.jsx, buttons)
+- Use CSS modules for app-level layout (Dashboard.module.css)
+- No Tailwind, no styled-components in this project
+
+## General
+- Prefer early returns over deeply nested if/else
+- No inline TODO comments in committed code — use mvp-1.md instead
+- No new dependencies without approval — check package.json before adding
+- One component per file, one utility function file per concern

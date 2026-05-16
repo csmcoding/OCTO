@@ -1,0 +1,359 @@
+# MVP-1 Plan: octopus-dashboard
+
+## Project goal
+Build a 3D radial file-architecture dashboard that:
+- Scans ~/projects once on startup
+- Renders a "you" node → tentacle → ~/projects root → ring of children
+- Highlights Git-dirty folders with a pulsing glow + "!" badge
+- Lets you click a folder to drill down (new ring)
+- Lets you click "Back to projects" to reset
+- Shows a metadata panel (path + git status) on any node click
+- Has an "Open in editor" button in the panel
+
+## Stack decisions (frozen)
+- Backend: Python, stdlib only, writes backend/tree.json
+- Frontend: React 18 + Vite + Three.js via @react-three/fiber
+- Data contract: nested JSON tree (see CLAUDE.md for schema)
+- No live file-watching in MVP-1
+
+## Status key
+- [ ] Not started
+- [~] In progress
+- [x] Done
+
+---
+
+## TASK-01 — Backend tree builder
+**Status**: [ ]
+**Owner**: Claude Code (terminal agent)
+**Touches**: backend/ only — do not touch frontend/
+
+### Files to create
+- backend/config.py
+- backend/git_status.py
+- backend/build_tree.py
+- backend/tests/test_build_tree.py
+- backend/tests/fixtures/sample_project/ (see below)
+
+### Exact behavior
+config.py:
+  ROOT_PATH = os.path.expanduser("~/projects")
+  OUTPUT_PATH = os.path.join(os.path.dirname(__file__), "tree.json")
+
+git_status.py:
+  is_git_repo(path: str) -> bool
+    Returns True if path contains a .git directory
+  is_dirty(path: str) -> bool
+    Runs: git -C path status --porcelain
+    Returns True if output is non-empty
+
+build_tree.py:
+  build_tree(root: str) -> dict
+    Recursively walks root using os.walk or pathlib
+    For each path builds a node matching CLAUDE.md schema
+    Sets gitDirty = is_dirty(path) if is_git_repo(path), else False
+  write_tree_json(tree: dict, output_path: str) -> None
+    Writes json.dumps(tree, indent=2) to output_path
+  if __name__ == "__main__":
+    tree = build_tree(config.ROOT_PATH)
+    write_tree_json(tree, config.OUTPUT_PATH)
+
+### Fixture setup
+Create backend/tests/fixtures/sample_project/ with:
+  sample_project/
+    readme.txt                    (plain file)
+    clean_repo/                   (git init, one commit, no changes)
+      main.py
+    dirty_repo/                   (git init, one commit, one unstaged change)
+      index.js
+      unstaged_change.txt         (modified but not staged)
+    plain_folder/                 (not a git repo)
+      notes.md
+
+### Done when
+- python -m pytest backend/tests/ -v passes all tests
+- backend/tree.json exists and matches the node schema
+- gitDirty is True for dirty_repo, False for clean_repo and plain_folder
+
+### Handoff note (fill in when done)
+- Goal:
+- Changes:
+- Risks:
+- Next owner: Agent 2 (Cursor — TASK-02)
+
+---
+
+## TASK-02 — Frontend Vite scaffold
+**Status**: [ ]
+**Owner**: Cursor Agent Window
+**Touches**: frontend/ only — do not touch backend/
+**Requires**: TASK-01 handoff note written
+
+### Files to create
+- frontend/ (full Vite React scaffold)
+- frontend/src/components/Dashboard.jsx
+- frontend/src/utils/loadTree.js
+
+### Exact behavior
+1. Run: npm create vite@latest frontend -- --template react
+2. cd frontend && npm install three @react-three/fiber @react-three/drei
+3. Delete src/App.css and src/assets/
+4. Replace src/App.jsx with:
+   import Dashboard from './components/Dashboard'
+   export default function App() { return <Dashboard /> }
+5. Create Dashboard.jsx:
+   export default function Dashboard() { return <div>loading...</div> }
+6. Create loadTree.js:
+   export async function loadTree() {
+     const res = await fetch('/tree.json')
+     return res.json()
+   }
+7. Copy backend/tree.json → frontend/public/tree.json
+
+### Done when
+- npm run dev starts without errors
+- Browser shows "loading..." with no console errors
+- frontend/public/tree.json exists
+
+### Handoff note (fill in when done)
+- Goal:
+- Changes:
+- Risks:
+- Next owner: Agent 3 (Cursor — TASK-03)
+
+---
+
+## TASK-03 — Three.js radial scene
+**Status**: [ ]
+**Owner**: Cursor Agent Window
+**Touches**: frontend/src/ only
+**Requires**: TASK-02 handoff note written
+
+### Files to create
+- frontend/src/utils/buildRingLayout.js
+- frontend/src/components/ThreeScene.jsx (new)
+- frontend/src/components/Dashboard.jsx (update)
+
+### Exact behavior
+buildRingLayout.js:
+  export function buildRingLayout(children, radius = 4)
+  Returns: [ { node, position: [x, y, z] }, ... ]
+  Positions nodes evenly in a circle on the XZ plane (y = 0)
+  Formula: x = radius * cos(i * 2π / n), z = radius * sin(i * 2π / n)
+
+ThreeScene.jsx:
+  - Wraps everything in @react-three/fiber <Canvas>
+  - On mount: calls loadTree(), stores result in useState
+  - Renders:
+    a. "You" sphere at [0, 0, 0], color #FFFFFF, radius 0.3
+    b. Line from [0,0,0] to [0,0,-3] (tentacle)
+    c. ~/projects sphere at [0, 0, -3], color #4A90D9, radius 0.4
+    d. Direct children of root: buildRingLayout(root.children, 4)
+       Each child rendered as a sphere at its layout position
+  - Camera: starts at [0, 0, 1], animates to [0, 2, 10] over 2 seconds
+    Use useFrame + a lerp function for smooth animation
+
+Dashboard.jsx update:
+  - Import and render <ThreeScene />
+  - Remove the placeholder "loading..." div
+
+### Done when
+- npm run dev shows:
+  - Black canvas
+  - White "you" sphere at center
+  - Blue "projects" sphere behind it
+  - Ring of child spheres around it
+  - Zoom-out animation plays on load
+- No console errors
+
+### Handoff note (fill in when done)
+- Goal:
+- Changes:
+- Risks:
+- Next owner: Agent 4 (Cursor — TASK-04)
+
+---
+
+## TASK-04 — Node meshes + glow
+**Status**: [ ]
+**Owner**: Cursor Agent Window
+**Touches**: frontend/src/components/ only
+**Requires**: TASK-03 handoff note written
+
+### Files to create
+- frontend/src/components/NodeMesh.jsx (new)
+- frontend/src/components/ThreeScene.jsx (update — use NodeMesh)
+
+### Exact behavior
+NodeMesh.jsx:
+  Props: { node, position, onClick }
+
+  If node.type === "folder":
+    Render <mesh> with <torusGeometry args={[0.4, 0.1, 16, 100]} />
+    Color: #4A90D9 (blue) if clean, #FF8C00 (orange) if gitDirty
+
+  If node.type === "file":
+    Render <mesh> with <sphereGeometry args={[0.1, 16, 16]} />
+    Color: #AAAAAA (gray)
+
+  If node.gitDirty === true:
+    Wrap in a group
+    Add <pointLight color="#FF8C00" intensity={pulsingValue} distance={2} />
+    Add <Text position={[0, 0.6, 0]} fontSize={0.3} color="#FF8C00">!</Text>
+    Pulse: use useFrame + Math.sin(clock.elapsedTime * 2) mapped to 0→1 range
+
+  All nodes: call onClick(node) on click event
+
+ThreeScene.jsx update:
+  Replace raw <mesh> sphere renders with <NodeMesh> for all child nodes
+  Pass onClick handler that:
+    - For now just logs the node path (Panel comes in TASK-05)
+
+### Done when
+- Folders render as rings, files as dots
+- Dirty nodes pulse orange with "!" badge
+- Clean nodes are blue/gray, no animation
+- No performance issues for up to 50 nodes
+
+### Handoff note (fill in when done)
+- Goal:
+- Changes:
+- Risks:
+- Next owner: Agent 5 (Cursor — TASK-05 + TASK-06)
+
+---
+
+## TASK-05 + TASK-06 — Panel + click + back button
+**Status**: [ ]
+**Owner**: Cursor Agent Window
+**Touches**: frontend/src/components/ only
+**Requires**: TASK-04 handoff note written
+
+### Files to create
+- frontend/src/components/Panel.jsx (new)
+- frontend/src/components/BackToProjectsButton.jsx (new)
+- frontend/src/components/ThreeScene.jsx (update)
+
+### Exact behavior
+Panel.jsx:
+  Props: { node, onClose }
+  Rendered as an HTML overlay (position: absolute, top-right or bottom-left)
+  Shows:
+    - Path: node.path
+    - Type: node.type
+    - Git status: node.gitDirty ? "Dirty (uncommitted changes)" : "Clean"
+  Buttons:
+    - "Open in editor": console.log("open:", node.path) for now
+    - "Close": calls onClose()
+
+BackToProjectsButton.jsx:
+  Props: { onReset }
+  Rendered as an HTML button (position: fixed, top: 16px, right: 16px)
+  Label: "← Back to projects"
+  On click: calls onReset()
+  Only visible when currentRoot is not the ~/projects root
+
+ThreeScene.jsx updates:
+  State:
+    - selectedNode: null | node (for Panel)
+    - currentRoot: root node from tree.json initially
+  On folder NodeMesh click:
+    - Set currentRoot to clicked folder node
+    - Rebuild the ring using currentRoot.children via buildRingLayout
+    - Animate camera back to [0, 2, 10]
+  On file NodeMesh click:
+    - Set selectedNode to clicked file node
+    - Panel appears
+  Panel onClose:
+    - Set selectedNode to null
+  BackToProjectsButton onReset:
+    - Set currentRoot back to original root (store originalRoot in a ref)
+    - Animate camera to [0, 2, 10]
+
+### Done when (full happy path)
+1. Open dashboard → zoom-out animation plays → ring visible
+2. A dirty folder glows + shows "!" badge
+3. Click dirty folder → ring rebuilds with that folder's children
+4. Hover any node → metadata panel appears
+5. Click "Open in editor" → console.log fires with correct path
+6. Click "← Back to projects" → ring resets to ~/projects children
+7. Click a file node → panel shows file path and type
+8. All npm test assertions pass
+
+### Handoff note (fill in when done)
+- Goal:
+- Changes:
+- Risks:
+- Next owner: YOU — validate happy path and commit
+
+---
+
+## What you do after every task
+
+1. Read the handoff note the agent wrote.
+2. Run the tests:
+   - cd backend && python -m pytest tests/ -v
+   - cd frontend && npm test
+3. Open the app: cd frontend && npm run dev
+4. Manually check the done-when conditions for that task.
+5. If anything fails → paste the error into a new agent session with:
+   "Read CLAUDE.md and mvp-1.md. Fix this error: [paste error]"
+6. Once passing → git add -A && git commit -m "feat: TASK-0X done"
+7. Update the status in this file from [ ] to [x].
+8. Start the next agent.
+
+## Common failures and how to handle them
+
+| Symptom | Fix |
+|---|---|
+| Agent touched the wrong layer | Roll back with git checkout, restart agent |
+| tree.json schema mismatch | Fix build_tree.py, re-run, re-copy to frontend/public/ |
+| npm run dev crashes | Check console for missing imports, ask Cursor agent |
+| Tests failing after agent edit | Paste error into new agent: "fix this test failure" |
+| Two agents conflict on same file | Run sequentially, commit between each task |
+
+---
+
+## FIXTURE HANDOFF
+- Goal: created test fixtures with one clean repo and one dirty repo
+- Changes: backend/tests/fixtures/sample_project/ created
+- Verified: git status confirmed clean_repo is clean, dirty_repo is dirty
+- Risks: none
+- Next: PROMPT 2 — backend config + git helpers
+
+---
+
+## GIT HELPERS HANDOFF
+- Goal: wrote config.py and git_status.py
+- Verified: all 6 is_git_repo/is_dirty checks pass on fixtures
+- Changes: backend/config.py, backend/git_status.py
+- Risks: subprocess timeout is 5s — may be slow on network-mounted paths
+- Next: PROMPT 3 — build_tree.py
+
+---
+
+## TREE BUILDER HANDOFF
+- Goal: wrote build_tree.py, produces correct nested JSON tree
+- Verified: smoke tests pass, gitDirty correct on fixtures, tree.json written
+- Changes: backend/build_tree.py, backend/tree.json
+- Risks: deeply nested repos may be slow — acceptable for MVP-1
+- Next: PROMPT 4 — backend tests
+
+---
+
+## TESTS HANDOFF
+- Goal: full pytest suite passes for build_tree.py
+- Verified: all 7 tests pass
+  ```
+  tests/test_build_tree.py::test_root_node_shape PASSED
+  tests/test_build_tree.py::test_gitDirty_true_for_dirty_repo PASSED
+  tests/test_build_tree.py::test_gitDirty_false_for_clean_repo PASSED
+  tests/test_build_tree.py::test_gitDirty_false_for_plain_folder PASSED
+  tests/test_build_tree.py::test_file_nodes_never_dirty PASSED
+  tests/test_build_tree.py::test_hidden_files_excluded PASSED
+  tests/test_build_tree.py::test_write_tree_json PASSED
+  7 passed in 0.03s
+  ```
+- Changes: backend/tests/test_build_tree.py, backend/conftest.py (adds project root to sys.path so `from backend.*` imports resolve when pytest runs from backend/)
+- Risks: none
+- Next: YOU — commit, copy tree.json, then run PROMPT 5 (frontend scaffold)
