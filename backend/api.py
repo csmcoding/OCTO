@@ -1,26 +1,51 @@
+import asyncio
+import concurrent.futures
 import json
 import os
+import subprocess
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 
 from backend import config
 from backend.build_tree import build_tree, build_multi_root_tree
 
-app = FastAPI()
+
+def _count_nodes(node: dict, count: int = 0) -> int:
+    count += 1
+    for child in node.get("children", []):
+        count = _count_nodes(child, count)
+    return count
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    loop = asyncio.get_running_loop()
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        tree = await loop.run_in_executor(
+            pool,
+            lambda: build_multi_root_tree(max_depth=config.SHALLOW_DEPTH),
+        )
+    app.state.tree = tree
+    print(
+        f"[octopus] startup scan complete — {_count_nodes(tree)} nodes indexed"
+    )
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
-
-# In-memory tree cache; updated by /scan
-_tree_cache: dict = None
 
 
 @app.get("/health")
@@ -30,6 +55,9 @@ def health() -> dict:
 
 @app.get("/tree")
 def get_tree(depth: int = 2) -> dict:
+    tree = getattr(app.state, "tree", None)
+    if tree is not None and depth == config.SHALLOW_DEPTH:
+        return tree
     return build_multi_root_tree(max_depth=depth)
 
 
@@ -41,7 +69,6 @@ def get_subtree(path: str, depth: int = 3) -> dict:
 @app.get("/scan")
 def scan() -> StreamingResponse:
     def _generate():
-        global _tree_cache
         scanned = 0
         emitted_progress = False
         last_path = ""
@@ -60,7 +87,6 @@ def scan() -> StreamingResponse:
             if not p.exists():
                 continue
             for dirpath, dirnames, _ in os.walk(root_path, followlinks=False):
-                # Prune in-place so os.walk skips these subtrees
                 dirnames[:] = [
                     d for d in dirnames
                     if not d.startswith(".") and d not in config.SKIP_DIRS
@@ -79,7 +105,6 @@ def scan() -> StreamingResponse:
                         + "\n\n"
                     )
 
-        # Guarantee at least one progress event
         if not emitted_progress and scanned > 0:
             yield (
                 "data: "
@@ -91,8 +116,7 @@ def scan() -> StreamingResponse:
                 + "\n\n"
             )
 
-        # Rebuild in-memory cache after scan
-        _tree_cache = build_multi_root_tree(max_depth=config.SHALLOW_DEPTH)
+        app.state.tree = build_multi_root_tree(max_depth=config.SHALLOW_DEPTH)
 
         yield (
             "data: "
@@ -105,6 +129,30 @@ def scan() -> StreamingResponse:
         )
 
     return StreamingResponse(_generate(), media_type="text/event-stream")
+
+
+class OpenRequest(BaseModel):
+    path: str
+    action: str
+
+
+_ACTION_MAP = {
+    "editor":   lambda path: [config.EDITOR, path],
+    "files":    lambda path: [config.FILE_MANAGER, path],
+    "terminal": lambda path: [config.TERMINAL, "--workdir", path],
+}
+
+
+@app.post("/open")
+def open_path(req: OpenRequest) -> dict:
+    builder = _ACTION_MAP.get(req.action)
+    if builder is None:
+        return {"ok": False, "error": f"Unknown action: {req.action}"}
+    try:
+        subprocess.Popen(builder(req.path))
+        return {"ok": True, "action": req.action, "path": req.path}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @app.get("/settings")
