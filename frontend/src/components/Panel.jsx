@@ -1,7 +1,11 @@
+import { getActiveSignals, SIGNAL_COLORS, SIGNAL_LABELS } from '../utils/signals'
+
 export default function Panel({ node, onClose }) {
   const displayPath = node.path.length > 60
     ? '...' + node.path.slice(-60)
     : node.path
+
+  const activeSignals = getActiveSignals(node)
 
   return (
     <div style={{
@@ -23,9 +27,27 @@ export default function Panel({ node, onClose }) {
       <p style={{ margin: '0 0 6px 0', fontSize: 12, wordBreak: 'break-all' }}>
         {displayPath}
       </p>
-      <p style={{ margin: '0 0 4px 0', fontSize: 13, color: node.gitDirty ? '#FF8C00' : '#44ff88' }}>
-        {node.gitDirty ? '⚠ Dirty — uncommitted changes' : '✓ Clean'}
-      </p>
+      <div style={{ marginBottom: 8 }}>
+        {activeSignals.length === 0 ? (
+          <span style={{ fontSize: 12, color: '#44ff88' }}>✓ Clean</span>
+        ) : (
+          activeSignals.map(key => (
+            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+              <span style={{
+                display: 'inline-block',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: SIGNAL_COLORS[key],
+                flexShrink: 0,
+              }} />
+              <span style={{ fontSize: 12, color: SIGNAL_COLORS[key] }}>
+                {SIGNAL_LABELS[key]}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
       <div>
         <button
           style={{

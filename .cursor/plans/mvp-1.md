@@ -421,3 +421,17 @@ ThreeScene.jsx updates:
 - SSE scan: live progress via EventSource
 - Next: PROMPT 11 — expanded attention signals
   (gitUnpushed, recentlyModified, noReadme, dormant)
+
+---
+
+## PROMPT 11 HANDOFF — Expanded Attention Signals
+- Status: COMPLETE
+- Verified: 23 backend tests pass, 20 frontend tests pass, build clean (578 modules, 0 errors)
+- New files: backend/signals.py, backend/tests/test_signals.py, frontend/src/utils/signals.js, frontend/src/__tests__/signals.test.js
+- Modified: backend/git_status.py (added is_unpushed, has_readme), backend/build_tree.py (uses compute_signals), frontend/src/components/NodeMesh.jsx (signal-aware color/glow), frontend/src/components/Panel.jsx (colored signal dots)
+- Signal priority: gitUnpushed > gitDirty > noReadme > recentlyModified > dormant
+- Backward compat: gitDirty field preserved on all nodes
+- Risks:
+  - recentlyModified/dormant thresholds come from config; defaults are 3 days / 90 days
+  - "Open in editor" is still stubbed (console.log only)
+- Next: PROMPT 12 — real "Open in editor" integration or further UX polish

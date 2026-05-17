@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
-from backend.git_status import is_git_repo, is_dirty
 from backend import config
+from backend.signals import compute_signals, dominant_color, dominant_signal
 
 
 def build_node(path: str, depth: int = 0, max_depth: int = None) -> dict:
@@ -19,10 +19,14 @@ def build_node(path: str, depth: int = 0, max_depth: int = None) -> dict:
         "name": p.name,
         "type": node_type,
         "machine_id": config.MACHINE_ID,
-        "gitDirty": is_dirty(resolved) if node_type == "folder" else False,
         "hasChildren": False,
         "children": [],
     }
+    node_signals = compute_signals(resolved, node_type)
+    node["signals"] = node_signals
+    node["dominantSignal"] = dominant_signal(node_signals)
+    node["dominantColor"] = dominant_color(node_signals)
+    node["gitDirty"] = node_signals.get("gitDirty", False)
 
     if node_type != "folder":
         return node
@@ -77,6 +81,9 @@ def build_multi_root_tree(max_depth: int = None) -> dict:
         "type": "folder",
         "machine_id": config.MACHINE_ID,
         "gitDirty": False,
+        "signals": {},
+        "dominantSignal": None,
+        "dominantColor": None,
         "hasChildren": True,
         "children": children,
     }
