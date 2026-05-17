@@ -1,8 +1,9 @@
 import { useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
+import { getActiveSignals, getDominantColor } from '../utils/signals'
 
-function PulsingLight() {
+function PulsingLight({ color }) {
   const lightRef = useRef()
 
   useFrame(({ clock }) => {
@@ -11,13 +12,17 @@ function PulsingLight() {
     }
   })
 
-  return <pointLight ref={lightRef} color="#FF8C00" distance={2} />
+  return <pointLight ref={lightRef} color={color} distance={2} />
 }
 
 export default function NodeMesh({ node, position, onClick }) {
   const isFolder = node.type === 'folder'
+  const dominantColor = getDominantColor(node)
+  const activeSignals = getActiveSignals(node)
+  const hasSignal = activeSignals.length > 0
+
   const color = isFolder
-    ? node.gitDirty ? '#FF8C00' : '#4A90D9'
+    ? (dominantColor ?? '#4A90D9')
     : '#888888'
 
   return (
@@ -29,12 +34,12 @@ export default function NodeMesh({ node, position, onClick }) {
         }
         <meshStandardMaterial color={color} />
       </mesh>
-      {node.gitDirty && <PulsingLight />}
-      {node.gitDirty && (
+      {hasSignal && <PulsingLight color={dominantColor} />}
+      {hasSignal && (
         <Text
           position={[0, 0.6, 0]}
           fontSize={0.25}
-          color="#FF8C00"
+          color={dominantColor}
           depthOffset={-1}
         >
           !

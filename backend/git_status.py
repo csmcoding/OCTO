@@ -23,3 +23,42 @@ def is_dirty(path: str) -> bool:
         timeout=5,
     )
     return bool(result.stdout.strip())
+
+
+def is_unpushed(path: str) -> bool:
+    """
+    Returns True if the folder is a git repo with commits that exist
+    locally but not on the tracked remote branch.
+    Uses local ref comparison only — no network calls.
+    Returns False if no upstream is configured.
+    Silent on all exceptions.
+    """
+    if not is_git_repo(path):
+        return False
+    try:
+        result = subprocess.run(
+            ["git", "-C", path, "log", "@{u}..HEAD", "--oneline"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            return False  # no upstream configured
+        return bool(result.stdout.strip())
+    except Exception:
+        return False
+
+
+def has_readme(path: str) -> bool:
+    """
+    Returns True if the folder contains a file matching README*
+    (case-insensitive) at the top level.
+    Only meaningful when the folder is a git repo.
+    """
+    try:
+        return any(
+            e.is_file() and e.name.lower().startswith("readme")
+            for e in Path(path).iterdir()
+        )
+    except OSError:
+        return False
