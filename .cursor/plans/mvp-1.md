@@ -434,4 +434,35 @@ ThreeScene.jsx updates:
 - Risks:
   - recentlyModified/dormant thresholds come from config; defaults are 3 days / 90 days
   - "Open in editor" is still stubbed (console.log only)
-- Next: PROMPT 12 — real "Open in editor" integration or further UX polish
+- Next: PROMPT 12 — breadcrumb + dimmed parent node
+
+---
+
+## PROMPT 12 HANDOFF — Breadcrumb + Dimmed Parent Node
+- Status: COMPLETE
+- Verified: build clean (579 modules, 0 errors), all 25 Vitest tests pass, visual check done
+- New files: Breadcrumb.jsx, frontend/src/__tests__/Breadcrumb.test.jsx
+- Modified: ThreeScene.jsx (navStack replaces currentRoot state, SceneObjects gets parentNode prop)
+- Navigation model: navStack array, crumb click slices stack with prev.slice(0, idx + 1)
+- Parent node: position [0,0,3], scale 0.55, opacity 0.35, not interactive
+- Breadcrumb hidden at root (navStack.length <= 1), truncates to first+...+last3 beyond 5 crumbs
+- buildCrumbList exported as pure function for testing without jsdom
+- Next: PROMPT 13 — UX polish + open actions + Ctrl+K search
+
+---
+
+## PROMPT 13 HANDOFF — UX Polish + Open Actions + Ctrl+K Search
+- Status: COMPLETE
+- Verified: 25 backend tests pass, 33 frontend tests pass, build clean (582 modules, 0 errors)
+- New files: NodeTooltip.jsx, NodeSearch.jsx, frontend/src/utils/searchTree.js,
+  backend/tests/test_open.py, frontend/src/__tests__/NodeTooltip.test.js,
+  frontend/src/__tests__/NodeSearch.test.js
+- Modified: api.py (/open endpoint + POST CORS), loadTree.js (openNode), Panel.jsx
+  (3 open buttons + status feedback), NodeMesh.jsx (pointer events + onDoubleClick),
+  ThreeScene.jsx (click model, tooltip state, search state), Breadcrumb.jsx (hover effects)
+- Click model: single click = select (panel), double click = drill in / open editor
+- Open actions: cursor / dolphin / konsole via POST /open — fire-and-forget with 2s confirmation
+- Ctrl+K search: searches in-memory shallow tree, keyboard nav, Enter to jump + open panel
+- findAncestorStack walks loaded tree to reconstruct navStack on search select
+- getTooltipLines and buildCrumbList exported as pure functions for jsdom-free testing
+- Next: PROMPT 14 — settings.json reader + startup polish

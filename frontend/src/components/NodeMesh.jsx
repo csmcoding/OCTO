@@ -15,19 +15,26 @@ function PulsingLight({ color }) {
   return <pointLight ref={lightRef} color={color} distance={2} />
 }
 
-export default function NodeMesh({ node, position, onClick }) {
+export default function NodeMesh({
+  node, position,
+  onClick, onDoubleClick,
+  onPointerEnter, onPointerMove, onPointerLeave,
+}) {
   const isFolder = node.type === 'folder'
   const dominantColor = getDominantColor(node)
   const activeSignals = getActiveSignals(node)
   const hasSignal = activeSignals.length > 0
-
-  const color = isFolder
-    ? (dominantColor ?? '#4A90D9')
-    : '#888888'
+  const color = isFolder ? (dominantColor ?? '#4A90D9') : '#888888'
 
   return (
     <group position={position}>
-      <mesh onClick={() => onClick(node)}>
+      <mesh
+        onClick={(e) => { e.stopPropagation(); onClick?.(node) }}
+        onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(node) }}
+        onPointerEnter={(e) => { e.stopPropagation(); onPointerEnter?.(node, e) }}
+        onPointerMove={(e) => { e.stopPropagation(); onPointerMove?.(node, e) }}
+        onPointerLeave={(e) => { e.stopPropagation(); onPointerLeave?.(node, e) }}
+      >
         {isFolder
           ? <torusGeometry args={[0.35, 0.08, 16, 60]} />
           : <sphereGeometry args={[0.1, 12, 12]} />

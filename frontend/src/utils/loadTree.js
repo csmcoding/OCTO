@@ -14,6 +14,16 @@ export async function loadSubtree(path, depth = 3) {
   return res.json()
 }
 
+export async function openNode(path, action) {
+  const res = await fetch(`${API_BASE}/open`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, action }),
+  })
+  if (!res.ok) throw new Error(`Open failed: ${res.status}`)
+  return res.json()
+}
+
 /**
  * Opens an SSE connection to /scan.
  * Calls onProgress({ event, scanned, path, total, timestamp }) for each message.
