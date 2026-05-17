@@ -375,3 +375,49 @@ ThreeScene.jsx updates:
 - Changes: ThreeScene.jsx, buildRingLayout.js, Dashboard.jsx (updated)
 - Risks: ring may be empty if tree.json has no children at root level
 - Next: PROMPT 7 — node meshes + glow
+
+---
+
+## MESH HANDOFF
+- Goal: folders = torus, files = dot, dirty nodes pulse orange with "!" badge
+- Verified: visual confirmed in browser, click events logged, no errors
+- Changes: NodeMesh.jsx (new), ThreeScene.jsx (updated)
+- Risks: pulsing light may be subtle on dark backgrounds — intentional
+- Next: PROMPT 8 — panel + folder click + back button
+
+---
+
+## MVP-1 COMPLETE HANDOFF
+- Goal: full happy path works end-to-end
+- Verified: all 8 happy-path steps confirmed in browser
+- Changes: Panel.jsx, BackToProjectsButton.jsx, ThreeScene.jsx (final update)
+- Risks:
+    - "Open in editor" is stubbed (console.log only) — needs real terminal call
+    - No error state if tree.json is missing or malformed
+    - Performance not tested beyond ~50 nodes
+- Next: YOU — final commit, tag v0.1.0, celebrate
+
+---
+
+## PROMPT 9 HANDOFF — Backend API + SSE + Settings
+- Status: COMPLETE
+- Verified: 14 tests passing, all 5 curl checks pass
+- New files: backend/api.py, ~/.config/octopus-dashboard/settings.json
+- Modified: backend/config.py, backend/build_tree.py, .gitignore
+- Machine ID: uptonogood
+- API running on: http://localhost:7823
+- SSE scan endpoint: GET /scan (scanned 639 dirs, emitted 26 progress events)
+- Next: PROMPT 10 — frontend lazy loading + scan button + API integration
+- Risks: First scan of /home/uptonogood/.config may be slow if deeply nested
+
+---
+
+## PROMPT 10 HANDOFF — Frontend API Integration + Scan Button
+- Status: COMPLETE
+- Verified: build clean (577 modules, 0 errors), all 14 Vitest tests pass, manual checklist done
+- New files: ScanButton.jsx, ScanTimestamp.jsx
+- Modified: loadTree.js, ThreeScene.jsx, Dashboard.jsx, NodeMesh.jsx
+- API base: http://localhost:7823
+- SSE scan: live progress via EventSource
+- Next: PROMPT 11 — expanded attention signals
+  (gitUnpushed, recentlyModified, noReadme, dormant)

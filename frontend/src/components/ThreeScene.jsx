@@ -1,8 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Line, OrbitControls } from '@react-three/drei'
-import { loadTree } from '../utils/loadTree'
+import { loadTree, loadSubtree } from '../utils/loadTree'
 import { buildRingLayout } from '../utils/buildRingLayout'
+import NodeMesh from './NodeMesh'
+import Panel from './Panel'
+import BackToProjectsButton from './BackToProjectsButton'
 
 function CameraRig() {
   const { camera } = useThree()
@@ -18,8 +21,8 @@ function CameraRig() {
   return null
 }
 
-function SceneObjects({ treeData }) {
-  const layout = buildRingLayout(treeData.children, 4)
+function SceneObjects({ currentRoot, onNodeClick }) {
+  const ringLayout = buildRingLayout(currentRoot?.children ?? [], 4)
 
   return (
     <>
@@ -37,30 +40,84 @@ function SceneObjects({ treeData }) {
         <meshStandardMaterial color="#4A90D9" />
       </mesh>
 
-      {layout.map(({ node, position }) => (
-        <mesh key={node.id} position={position}>
-          <sphereGeometry args={[0.3, 16, 16]} />
-          <meshStandardMaterial color="#4A90D9" />
-        </mesh>
+      {ringLayout.map(({ node, position }) => (
+        <NodeMesh
+          key={node.id}
+          node={node}
+          position={position}
+          onClick={onNodeClick}
+        />
       ))}
     </>
   )
 }
 
-export default function ThreeScene() {
-  const [treeData, setTreeData] = useState(null)
+export default function ThreeScene({ treeData, onLoadingChange }) {
+  const [currentRoot, setCurrentRoot] = useState(null)
+  const [selectedNode, setSelectedNode] = useState(null)
+  const originalRootRef = useRef(null)
 
+  // Initial load from API
   useEffect(() => {
-    loadTree().then(setTreeData).catch(console.error)
+    loadTree(2).then(data => {
+      setCurrentRoot(data)
+      originalRootRef.current = data
+    }).catch(console.error)
   }, [])
 
+  // Post-scan refresh pushed from Dashboard
+  useEffect(() => {
+    if (treeData) {
+      setCurrentRoot(treeData)
+      setSelectedNode(null)
+      originalRootRef.current = treeData
+    }
+  }, [treeData])
+
+  const handleNodeClick = async (node) => {
+    if (node.type === 'folder') {
+      let target = node
+      if (node.hasChildren && node.children.length === 0) {
+        onLoadingChange(true)
+        try {
+          target = await loadSubtree(node.path, 3)
+        } catch (e) {
+          console.error('subtree load failed', e)
+          onLoadingChange(false)
+          return
+        }
+        onLoadingChange(false)
+      }
+      setCurrentRoot(target)
+      setSelectedNode(null)
+    } else {
+      setSelectedNode(node)
+    }
+  }
+
+  const showBack = currentRoot !== null && currentRoot !== originalRootRef.current
+
   return (
-    <Canvas camera={{ position: [0, 2, 1] }} style={{ width: '100%', height: '100%' }}>
-      <color attach="background" args={['#0a0a0f']} />
-      <ambientLight intensity={0.3} />
-      <CameraRig />
-      {treeData && <SceneObjects treeData={treeData} />}
-      <OrbitControls />
-    </Canvas>
+    <>
+      <Canvas camera={{ position: [0, 2, 1] }} style={{ width: '100%', height: '100%' }}>
+        <color attach="background" args={['#0a0a0f']} />
+        <ambientLight intensity={0.3} />
+        <CameraRig />
+        {currentRoot && <SceneObjects currentRoot={currentRoot} onNodeClick={handleNodeClick} />}
+        <OrbitControls />
+      </Canvas>
+      {selectedNode && (
+        <Panel node={selectedNode} onClose={() => setSelectedNode(null)} />
+      )}
+      {showBack && (
+        <BackToProjectsButton
+          visible={true}
+          onReset={() => {
+            setCurrentRoot(originalRootRef.current)
+            setSelectedNode(null)
+          }}
+        />
+      )}
+    </>
   )
 }
