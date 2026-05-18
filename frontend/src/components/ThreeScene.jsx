@@ -16,19 +16,20 @@ import Panel from './Panel'
 import BackToProjectsButton from './BackToProjectsButton'
 import Breadcrumb from './Breadcrumb'
 import NodeTooltip from './NodeTooltip'
-import NodeSearch from './NodeSearch'
+import SearchPanel from './SearchPanel'
 import NodeContextMenu from './NodeContextMenu'
 import Minimap from './Minimap'
 import PinTray from './PinTray'
 import SettingsPanel from './SettingsPanel'
 
-function CameraRig({ hoveredPosition, autoRotate }) {
+function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
   const { camera, size } = useThree()
   const base = useRef({ theta: 0 })
   const spring = useRef({ x: 0, y: 4, z: 10 })
   const lookTarget = useRef(new Vector3(0, 0, 0))
   const rRef = useRef(10)
   const zoomRef = useRef(1.0)
+  const lastCbRef = useRef(0)
 
   useEffect(() => {
     rRef.current = size.width < 900 ? 13 : 10
@@ -88,6 +89,14 @@ function CameraRig({ hoveredPosition, autoRotate }) {
 
     camera.position.set(spring.current.x, spring.current.y, spring.current.z)
     camera.lookAt(lookTarget.current)
+
+    if (onCameraMove) {
+      const now = performance.now()
+      if (now - lastCbRef.current > 50) {
+        onCameraMove({ x: spring.current.x, y: spring.current.y, z: spring.current.z })
+        lastCbRef.current = now
+      }
+    }
   })
 
   return null
@@ -435,6 +444,14 @@ function SceneObjects({
   )
 }
 
+function flattenTree(root) {
+  if (!root) return []
+  const nodes = []
+  const walk = (node) => { nodes.push(node); node.children?.forEach(walk) }
+  walk(root)
+  return nodes
+}
+
 function findAncestorStack(root, targetPath) {
   if (!root) return null
   if (root.path === targetPath) return [root]
@@ -466,6 +483,8 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
   })
   const [shareCopied, setShareCopied] = useState(false)
   const [capInfo, setCapInfo] = useState(null)
+  const [cameraPos, setCameraPos] = useState(null)
+  const [minimapCollapsed, setMinimapCollapsed] = useState(false)
   const setSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }))
   const scanDepthRef = useRef(2)
   scanDepthRef.current = settings.scanDepth
@@ -571,6 +590,26 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
     setSearchOpen(false)
   }, [])
 
+  const handleSearchDrillToNode = useCallback(async (node) => {
+    if (node.type === 'folder') {
+      await handleDrillIn(node)
+    } else {
+      handleSearchSelect(node)
+    }
+    setSearchOpen(false)
+  }, [handleDrillIn, handleSearchSelect])
+
+  // Flat node list for search — recomputed when navStack changes (tree load/rescan)
+  const flatNodes = useMemo(
+    () => flattenTree(originalRootRef.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [navStack],
+  )
+
+  const handleCameraMove = useCallback(({ x, y, z }) => {
+    setCameraPos({ x, y, z })
+  }, [])
+
   const handlePin = useCallback((node) => {
     setPins(prev => prev.some(p => p.id === node.id) ? prev : [...prev, node])
   }, [])
@@ -662,7 +701,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           resize={{ debounce: 50 }}
         >
           <SceneBackground colorTheme={settings.colorTheme} />
-          <CameraRig hoveredPosition={hoveredEndPos} autoRotate={settings.autoRotate} />
+          <CameraRig hoveredPosition={hoveredEndPos} autoRotate={settings.autoRotate} onCameraMove={handleCameraMove} />
           <HoverRipple position={hoveredEndPos} />
           {currentRoot && (
             <SceneObjects
@@ -811,10 +850,14 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
       )}
       <KeyboardLegend />
       <Minimap
-        layout={layout}
-        hoveredId={hoveredId}
-        selectedId={selectedNode?.id}
-        onNodeClick={setSelectedNode}
+        nodes={layout}
+        selectedNodeId={selectedNode?.id}
+        hoveredNodeId={hoveredId}
+        currentRoot={currentRoot}
+        cameraPosition={cameraPos}
+        onJumpToNode={setSelectedNode}
+        collapsed={minimapCollapsed}
+        onToggleCollapsed={() => setMinimapCollapsed(v => !v)}
       />
       <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} />
       <NodeTooltip node={tooltip.node} x={tooltip.x} y={tooltip.y} />
@@ -857,13 +900,14 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           }}
         />
       )}
-      {searchOpen && (
-        <NodeSearch
-          tree={originalRootRef.current}
-          onSelect={handleSearchSelect}
-          onClose={() => setSearchOpen(false)}
-        />
-      )}
+      <SearchPanel
+        open={searchOpen}
+        nodes={flatNodes}
+        currentRoot={currentRoot}
+        onClose={() => setSearchOpen(false)}
+        onSelectNode={handleSearchSelect}
+        onDrillToNode={handleSearchDrillToNode}
+      />
     </>
   )
 }

@@ -904,3 +904,48 @@ shortcut `useEffect`. No logic changes — pure reorder.
 - Tests: 86 frontend (added test 11 — default theme is 'dark'), 47 backend
 - All suites green, build clean
 - Next: PROMPT 31 — search panel redesign + fuzzy matching + keyboard-first navigation
+
+## PROMPT 31 HANDOFF — Search Panel Redesign + Fuzzy Matching
+- Status: COMPLETE
+- Rebuilt NodeSearch → SearchPanel: centered command-palette overlay
+  (640px max, #151823 bg, 18px radius, backdrop blur, slide-open at 10vh)
+- Added fuzzySearch.js: custom scorer, no Fuse.js
+  - Scores: exact(100) > startsWith(80) > contains(60) > path(40) >
+    subsequence(20) > signal label(15)
+  - Boosts: +10 signal, +5 folder
+  - Max 30 results; tiebreak: folder > file > shorter path > alpha
+- Filter chips: All / Folders / Files / Signals / Git / TODO / Large / Deep
+  (Tab cycles chips; click also selects)
+- Rich result rows: type badge, relative path, signal dots, match reason
+- Keyboard: ↑↓ navigate, Enter select, Ctrl+Enter drill into folder,
+  Esc close, Tab cycle filters
+- flattenTree added to ThreeScene; flatNodes useMemo keyed on navStack
+- handleSearchDrillToNode: drills folder via handleDrillIn, selects file
+- SearchPanel at z-index 600 (above Panel at 500)
+- Tests: fuzzySearch.test.js (11), searchPanel.test.js (13) = 24 new
+- All 110 frontend + 47 backend tests green, build clean
+- Next: PROMPT 32 — minimap / constellation overview + viewport navigation
+
+## PROMPT 32 HANDOFF — Minimap / Constellation Overview
+- Status: COMPLETE
+- Rewrote Minimap.jsx: new props (nodes, selectedNodeId, hoveredNodeId,
+  currentRoot, cameraPosition, onJumpToNode, collapsed, onToggleCollapsed)
+- Moved to bottom-LEFT (was bottom-right), z-index 80
+  - Expanded: 240×180; Collapsed: 44×44 circular button (⊕ icon)
+  - Header row: node count + collapse (−) button
+- Created projectMinimap.js:
+  - computeProjection(positions, w, h, pad): normalizes 3D→2D using
+    px=x, py=(z + y*0.35) — slight isometric tilt; returns { project, scale }
+  - findClosestNode(cx, cy, pts, entries, threshold=12): returns clicked node
+  - Same projection function reused for camera marker
+- Camera marker: CameraRig now accepts onCameraMove callback, fires at ≤50ms
+  intervals via lastCbRef throttle; ThreeScene stores cameraPos state;
+  camera dot + line-to-center drawn on minimap at projected position
+- Labels: selected/hovered nodes show name near their dot; currentRoot
+  name appears above center dot
+- Click-to-jump: handleClick uses computeProjection + findClosestNode,
+  calls onJumpToNode (wired to setSelectedNode in ThreeScene)
+- minimapCollapsed state in ThreeScene; toggle via onToggleCollapsed
+- Tests: projectMinimap.test.js (8), minimap.test.js (8) = 16 new
+- All 126 frontend tests green, build clean (0 errors)
+- Next: PROMPT 33 (TBD)
