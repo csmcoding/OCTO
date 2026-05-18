@@ -200,6 +200,12 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
           label="Tentacle sway"
           description="Organic idle animation"
         />
+        <Toggle
+          on={settings.activityMode}
+          onChange={() => setSetting('activityMode', !settings.activityMode)}
+          label="Activity mode  [T]"
+          description="Overlay git recency and churn"
+        />
         <Slider
           value={settings.scanDepth}
           min={1} max={5}
@@ -247,6 +253,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
               setSetting('sway', true)
               setSetting('scanDepth', 2)
               setSetting('colorTheme', 'dark')
+              setSetting('activityMode', false)
             }}
             style={{
               flex: 1, padding: '6px 0',

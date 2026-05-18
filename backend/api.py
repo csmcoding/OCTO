@@ -444,6 +444,117 @@ async def api_open_in_editor(path: str):
         return {"ok": False, "reason": str(e)}
 
 
+@app.get("/api/activity")
+async def api_activity(path: str):
+    """Return git activity data (commits, churn) for files under path."""
+    from datetime import timedelta
+
+    root = Path(path).expanduser()
+    now = datetime.now(timezone.utc)
+    now_iso = now.isoformat()
+
+    def _git(*args):
+        return subprocess.run(
+            ["git", "-C", str(root), *args],
+            capture_output=True, text=True, timeout=10,
+        )
+
+    # Verify path is inside a git repo
+    try:
+        r = _git("rev-parse", "--is-inside-work-tree")
+        if r.returncode != 0:
+            return {"root": path, "generatedAt": now_iso, "items": [], "unavailable": "not_git_repo"}
+    except Exception:
+        return {"root": path, "generatedAt": now_iso, "items": [], "unavailable": "not_git_repo"}
+
+    seven_days_ago = now - timedelta(days=7)
+
+    # Get commits from last 31 days with file names relative to root
+    try:
+        log_r = _git(
+            "log",
+            "--since=31.days ago",
+            "--format=COMMIT\x01%H\x01%ae\x01%aI\x01%s",
+            "--name-only",
+            "--relative",
+            "--diff-filter=ACDMRT",
+            "--", ".",
+        )
+        log_output = log_r.stdout or ""
+    except subprocess.TimeoutExpired:
+        return {"root": path, "generatedAt": now_iso, "items": [], "unavailable": "git_timeout"}
+    except Exception:
+        return {"root": path, "generatedAt": now_iso, "items": []}
+
+    # Get dirty file list
+    dirty_set: set = set()
+    try:
+        st_r = _git("status", "--porcelain=v1", "--", ".")
+        for line in (st_r.stdout or "").splitlines():
+            if len(line) >= 4:
+                fname = line[3:].split(" -> ")[-1].strip()
+                dirty_set.add(fname)
+    except Exception:
+        pass
+
+    # Parse log output — git emits newest commit first
+    file_data: dict = {}
+    file_first_seen: set = set()
+    current_commit = None
+
+    for raw in log_output.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("COMMIT\x01"):
+            parts = line.split("\x01", 4)
+            sha  = parts[1] if len(parts) > 1 else ""
+            email = parts[2] if len(parts) > 2 else ""
+            at   = parts[3] if len(parts) > 3 else ""
+            msg  = parts[4] if len(parts) > 4 else ""
+            try:
+                dt = datetime.fromisoformat(at)
+            except Exception:
+                dt = None
+            current_commit = {"sha": sha, "email": email, "at": at, "msg": msg, "dt": dt}
+        elif current_commit is not None:
+            rel_path = line
+            if rel_path not in file_data:
+                file_data[rel_path] = {
+                    "count_30d": 0, "count_7d": 0,
+                    "last_sha": None, "last_at": None,
+                    "last_msg": None, "author": None,
+                }
+            fd = file_data[rel_path]
+            fd["count_30d"] += 1
+            if current_commit["dt"] and current_commit["dt"] >= seven_days_ago:
+                fd["count_7d"] += 1
+            # First occurrence = most recent (log is reverse-chron)
+            if rel_path not in file_first_seen:
+                file_first_seen.add(rel_path)
+                fd["last_sha"]  = current_commit["sha"][:7] if current_commit["sha"] else None
+                fd["last_at"]   = current_commit["at"]
+                fd["last_msg"]  = current_commit["msg"]
+                fd["author"]    = current_commit["email"]
+
+    items = [
+        {
+            "path": str(root / rel_path),
+            "relPath": rel_path,
+            "lastCommitAt": fd["last_at"],
+            "lastCommitSha": fd["last_sha"],
+            "lastCommitMessage": fd["last_msg"],
+            "author": fd["author"],
+            "commitCount30d": fd["count_30d"],
+            "commitCount7d": fd["count_7d"],
+            "isDirty": rel_path in dirty_set,
+        }
+        for rel_path, fd in file_data.items()
+    ]
+
+    return {"root": path, "generatedAt": now_iso, "items": items}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.api:app", host="0.0.0.0", port=config.API_PORT)
