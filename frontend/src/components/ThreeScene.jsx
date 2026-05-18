@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
 import { Vector3, MathUtils, BufferGeometry, BufferAttribute } from 'three'
 import { loadTree, loadSubtree, openNode } from '../utils/loadTree'
+import { exportMarkdown, downloadMarkdown } from '../utils/exportMarkdown'
 import { buildTentacleLayout } from '../utils/buildTentacleLayout'
 import { useRevealProgress } from '../utils/useAnimationClock'
 import { getNodeColor } from '../utils/palette'
@@ -120,6 +121,7 @@ function KeyboardLegend() {
   const shortcuts = [
     ['⌘K',        'Search nodes'],
     ['S',         'Settings'],
+    ['R',         'Rescan'],
     ['Enter',     'Open selected'],
     ['Backspace', 'Go up one level'],
     ['Esc',       'Close / deselect'],
@@ -230,6 +232,32 @@ function ZoomHint() {
   )
 }
 
+function OverflowBadge({ total, visible }) {
+  if (!total || total <= visible) return null
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 52,
+      left: '50%',
+      transform: 'translateX(-50%)',
+      zIndex: 80,
+      background: 'rgba(6,6,18,0.88)',
+      border: '1px solid rgba(200,140,60,0.35)',
+      borderRadius: 20,
+      padding: '3px 12px',
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 9,
+      color: 'rgba(200,160,80,0.75)',
+      letterSpacing: '0.06em',
+      pointerEvents: 'none',
+      backdropFilter: 'blur(8px)',
+      whiteSpace: 'nowrap',
+    }}>
+      showing {visible} of {total} nodes — use scan depth to narrow scope
+    </div>
+  )
+}
+
 function SceneBackground({ colorTheme }) {
   const { gl } = useThree()
   useEffect(() => {
@@ -238,24 +266,47 @@ function SceneBackground({ colorTheme }) {
   return null
 }
 
+const SCENE_NODE_CAP = 80
+
 function SceneObjects({
   currentRoot, parentNode, ringKey, selectedNodeId,
   onNodeClick, onNodeDoubleClick, onNodeContextMenu,
   onPointerEnter, onPointerMove, onPointerLeave,
   onHoverPosition,
-  hoveredId, onHoveredChange, onLayoutReady,
+  hoveredId, onHoveredChange, onLayoutReady, onCapInfo,
   showLabels, sway, colorTheme,
 }) {
-  const nodeCount = currentRoot?.children?.length ?? 0
+  const children = currentRoot?.children ?? []
+  const isCapped = children.length > SCENE_NODE_CAP
+  const visibleChildren = useMemo(
+    () => isCapped ? children.slice(0, SCENE_NODE_CAP) : children,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [children, isCapped],
+  )
+  const nodeCount = visibleChildren.length
   const radius = Math.max(3.8, Math.min(6.0, nodeCount * 0.28 + 3.0))
 
   const layout = useMemo(
-    () => buildTentacleLayout(currentRoot?.children ?? [], radius),
+    () => buildTentacleLayout(visibleChildren, radius),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [currentRoot, radius],
+    [visibleChildren, radius],
   )
 
   useEffect(() => { onLayoutReady?.(layout) }, [layout, onLayoutReady])
+  useEffect(() => {
+    onCapInfo?.({ capped: isCapped, total: children.length, visible: nodeCount })
+  }, [isCapped, children.length, nodeCount, onCapInfo])
+
+  const handlePointerLeave = useCallback(() => {
+    onHoveredChange(null)
+    onHoverPosition?.(null)
+    onPointerLeave?.()
+  }, [onHoveredChange, onHoverPosition, onPointerLeave])
+
+  const handlePointerMove = useCallback(
+    (node, e) => onPointerMove?.(node, e),
+    [onPointerMove],
+  )
 
   const revealProgress = useRevealProgress(ringKey, 1200)
 
@@ -325,8 +376,7 @@ function SceneObjects({
               index={i}
               color={color}
               hovered={isHovered}
-              revealProgress={revealProgress}
-              delay={delay}
+              nodeCount={nodeCount}
               sway={sway}
             />
             <NodeMesh
@@ -344,12 +394,8 @@ function SceneObjects({
                 onHoverPosition?.(endPosition)
                 onPointerEnter?.(n, e)
               }}
-              onPointerMove={onPointerMove}
-              onPointerLeave={() => {
-                onHoveredChange(null)
-                onHoverPosition?.(null)
-                onPointerLeave?.()
-              }}
+              onPointerMove={handlePointerMove}
+              onPointerLeave={handlePointerLeave}
             />
           </group>
         )
@@ -387,18 +433,28 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
     scanDepth:  2,
     colorTheme: 'dark',
   })
+  const [shareCopied, setShareCopied] = useState(false)
+  const [capInfo, setCapInfo] = useState(null)
   const setSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }))
   const scanDepthRef = useRef(2)
   scanDepthRef.current = settings.scanDepth
   const originalRootRef = useRef(null)
+  const navStackRef = useRef([])
+  navStackRef.current = navStack
 
   const currentRoot = navStack[navStack.length - 1] ?? null
   const parentNode = navStack[navStack.length - 2] ?? null
 
   useEffect(() => {
+    const h = window.location.hash
+    const hashPath = h.startsWith('#p=') ? decodeURIComponent(h.slice(3)) : null
     loadTree(2).then(data => {
-      setNavStack([data])
       originalRootRef.current = data
+      if (hashPath) {
+        const stack = findAncestorStack(data, hashPath)
+        if (stack?.length) { setNavStack(stack); return }
+      }
+      setNavStack([data])
     }).catch(console.error)
   }, [])
 
@@ -414,6 +470,32 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
   useEffect(() => {
     if (currentRoot) setRevealKey(k => k + 1)
   }, [currentRoot])
+
+  useEffect(() => {
+    if (!navStack.length) return
+    const path = navStack[navStack.length - 1].path
+    const hash = path ? '#p=' + encodeURIComponent(path) : ''
+    window.history.replaceState(null, '', hash || window.location.pathname)
+  }, [navStack])
+
+  const handleRescan = useCallback(async () => {
+    onLoadingChange(true)
+    try {
+      const stack = navStackRef.current
+      const root = stack[stack.length - 1]
+      if (root?.path && stack.length > 1) {
+        const fresh = await loadSubtree(root.path, scanDepthRef.current)
+        setNavStack(prev => [...prev.slice(0, -1), fresh])
+      } else {
+        const fresh = await loadTree(scanDepthRef.current)
+        originalRootRef.current = fresh
+        setNavStack([fresh])
+      }
+    } catch (e) {
+      console.error('rescan failed', e)
+    }
+    onLoadingChange(false)
+  }, [onLoadingChange])
 
   const handleDrillIn = useCallback(async (node) => {
     let target = node
@@ -495,6 +577,11 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
         return
       }
 
+      if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey) {
+        handleRescan()
+        return
+      }
+
       if ((e.key === 'Backspace' || e.key === 'ArrowLeft') && !e.metaKey && !e.ctrlKey) {
         if (parentNode) {
           setNavStack(prev => prev.slice(0, -1))
@@ -511,7 +598,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [settingsOpen, searchOpen, selectedNode, parentNode, handleNodeDoubleClick])
+  }, [settingsOpen, searchOpen, selectedNode, parentNode, handleNodeDoubleClick, handleRescan])
 
   const showBack = navStack.length > 1
 
@@ -561,6 +648,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
               hoveredId={hoveredId}
               onHoveredChange={setHoveredId}
               onLayoutReady={setLayout}
+              onCapInfo={setCapInfo}
               showLabels={settings.showLabels}
               sway={settings.sway}
               colorTheme={settings.colorTheme}
@@ -569,6 +657,9 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
         </Canvas>
       </div>
       <ZoomHint />
+      {capInfo?.capped && (
+        <OverflowBadge total={capInfo.total} visible={capInfo.visible} />
+      )}
       <button
         onClick={() => setSettingsOpen(v => !v)}
         style={{
@@ -601,11 +692,80 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
         aria-label="Settings"
         title="Settings"
       >⚙</button>
+      <button
+        onClick={() => {
+          const md = exportMarkdown({ currentRoot, navStack, pins })
+          downloadMarkdown(md)
+        }}
+        style={{
+          position: 'fixed',
+          bottom: 116,
+          left: 20,
+          zIndex: 90,
+          width: 22, height: 22,
+          borderRadius: '50%',
+          background: 'rgba(8,8,22,0.75)',
+          border: '1px solid rgba(124,157,245,0.2)',
+          color: 'rgba(110,110,158,0.7)',
+          fontSize: 11, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+          backdropFilter: 'blur(8px)',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+          e.currentTarget.style.color = '#e2e2f2'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
+          e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+        }}
+        aria-label="Export markdown"
+        title="Export snapshot (.md)"
+      >↓</button>
+      <button
+        onClick={() => {
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            setShareCopied(true)
+            setTimeout(() => setShareCopied(false), 2000)
+          }).catch(() => {})
+        }}
+        style={{
+          position: 'fixed',
+          bottom: 148,
+          left: 20,
+          zIndex: 90,
+          width: 22, height: 22,
+          borderRadius: '50%',
+          background: shareCopied ? 'rgba(78,205,196,0.15)' : 'rgba(8,8,22,0.75)',
+          border: `1px solid ${shareCopied ? 'rgba(78,205,196,0.6)' : 'rgba(124,157,245,0.2)'}`,
+          color: shareCopied ? '#4ecdc4' : 'rgba(110,110,158,0.7)',
+          fontSize: 10, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+          backdropFilter: 'blur(8px)',
+        }}
+        onMouseEnter={e => {
+          if (!shareCopied) {
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+            e.currentTarget.style.color = '#e2e2f2'
+          }
+        }}
+        onMouseLeave={e => {
+          if (!shareCopied) {
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
+            e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+          }
+        }}
+        aria-label="Copy share link"
+        title="Copy share link"
+      >{shareCopied ? '✓' : '⬡'}</button>
       {settingsOpen && (
         <SettingsPanel
           settings={settings}
           setSetting={setSetting}
           onClose={() => setSettingsOpen(false)}
+          onRescan={handleRescan}
         />
       )}
       <KeyboardLegend />

@@ -29,7 +29,11 @@ SKIP_DIRS: frozenset = frozenset({
     "snap", "proc", "sys", "Music", "Pictures", "Movies", "Videos", "Downloads",
     ".git", ".venv", ".npm", ".yarn", ".gradle", ".cargo",
     ".cache", ".local", ".Trash",
+    "env", ".next", ".nuxt", "coverage", ".parcel-cache", ".turbo",
+    "vendor", "Pods", "target",
 })
+
+MAX_CHILDREN: int = 120
 
 API_PORT: int = 7823
 

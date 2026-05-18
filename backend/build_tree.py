@@ -1,10 +1,36 @@
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+
 from backend import config
 from backend.signals import compute_signals, dominant_color, dominant_signal
 
 
-def build_node(path: str, depth: int = 0, max_depth: int = None) -> dict:
+def _compute_signals_batch(paths_and_types: list[tuple[str, str]]) -> dict:
+    """Compute signals for multiple (path, type) pairs concurrently."""
+    if not paths_and_types:
+        return {}
+    results = {}
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {
+            executor.submit(compute_signals, path, ntype): path
+            for path, ntype in paths_and_types
+        }
+        for future in as_completed(futures):
+            path = futures[future]
+            try:
+                results[path] = future.result(timeout=2)
+            except Exception:
+                results[path] = {}
+    return results
+
+
+def build_node(
+    path: str,
+    depth: int = 0,
+    max_depth: int = None,
+    _precomputed_signals: dict = None,
+) -> dict:
     """
     Build a single node. Recurses into folders up to max_depth.
     At max_depth, sets hasChildren without loading children.
@@ -22,7 +48,12 @@ def build_node(path: str, depth: int = 0, max_depth: int = None) -> dict:
         "hasChildren": False,
         "children": [],
     }
-    node_signals = compute_signals(resolved, node_type)
+
+    node_signals = (
+        _precomputed_signals
+        if _precomputed_signals is not None
+        else compute_signals(resolved, node_type)
+    )
     node["signals"] = node_signals
     node["dominantSignal"] = dominant_signal(node_signals)
     node["dominantColor"] = dominant_color(node_signals)
@@ -43,17 +74,40 @@ def build_node(path: str, depth: int = 0, max_depth: int = None) -> dict:
         return node
 
     try:
-        entries = sorted(p.iterdir(), key=lambda e: (e.is_file(), e.name))
+        all_entries = list(p.iterdir())
     except PermissionError:
         return node  # cannot list this directory; return stub
 
+    entries = [
+        e for e in all_entries
+        if not e.name.startswith(".")
+        and e.name not in config.SKIP_DIRS
+        and not (e.is_symlink() and e.is_dir())
+    ]
+    entries.sort(key=lambda e: (e.is_file(), e.name))
+
+    original_count = len(entries)
+    if original_count > config.MAX_CHILDREN:
+        entries = entries[:config.MAX_CHILDREN]
+
+    node["truncated"] = original_count > config.MAX_CHILDREN
+    node["skipped"] = max(0, original_count - len(entries))
+
+    # Batch compute signals for all direct children concurrently
+    child_signal_map = _compute_signals_batch([
+        (str(e.resolve()), "folder" if e.is_dir() else "file")
+        for e in entries
+    ])
+
     for entry in entries:
-        if entry.name.startswith(".") or entry.name in config.SKIP_DIRS:
-            continue
-        if entry.is_symlink() and entry.is_dir():
-            continue  # skip symlinked dirs to avoid infinite cycles
+        child_resolved = str(entry.resolve())
         try:
-            child = build_node(str(entry), depth + 1, max_depth)
+            child = build_node(
+                str(entry),
+                depth + 1,
+                max_depth,
+                _precomputed_signals=child_signal_map.get(child_resolved),
+            )
             node["children"].append(child)
         except (PermissionError, OSError):
             pass  # skip unreadable entries, continue with siblings

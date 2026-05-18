@@ -1,76 +1,71 @@
-import { useRef, useMemo, useEffect } from 'react'
+import React, { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { TubeGeometry, CatmullRomCurve3 } from 'three'
+import { TubeGeometry } from 'three'
 import { swayTentacle } from '../utils/buildTentacleLayout'
 
-export default function Tentacle({
+const SEGMENTS_HI = 24  // ≤30 nodes in scene, or hovered
+const SEGMENTS_LO = 10  // >30 nodes in scene, not hovered
+
+function Tentacle({
   curve, basePoints, index,
-  color = '#4ecdc4', hovered = false,
-  revealProgress = 1, delay = 0,
+  color = '#4ecdc4',
+  hovered = false,
+  nodeCount = 1,
   sway = true,
 }) {
   const meshRef = useRef()
-  const frame = useRef(0)
-  const revealStartRef = useRef(null)
+  const geoRef  = useRef(null)
 
-  const initGeo = useMemo(
-    () => new TubeGeometry(curve, 24, 0.022, 6, false),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
+  const segments = (nodeCount > 30 && !hovered) ? SEGMENTS_LO : SEGMENTS_HI
+  const radius   = hovered ? 0.042 : 0.022
 
-  useEffect(() => () => meshRef.current?.geometry?.dispose(), [])
+  const buildGeo = () => {
+    geoRef.current?.dispose()
+    const geo = new TubeGeometry(curve, segments, radius, 6, false)
+    geoRef.current = geo
+    geo.attributes.position.usage = 35048  // DynamicDrawUsage
+    return geo
+  }
+
+  // Build once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const initGeo = useMemo(buildGeo, [])
+
+  // Rebuild only when LOD tier or hover changes (rare, not every frame)
+  const prevSegmentsRef = useRef(segments)
+  const prevHoveredRef  = useRef(hovered)
+  useEffect(() => {
+    if (
+      prevSegmentsRef.current !== segments ||
+      prevHoveredRef.current  !== hovered
+    ) {
+      if (meshRef.current) {
+        meshRef.current.geometry = buildGeo()
+      }
+      prevSegmentsRef.current = segments
+      prevHoveredRef.current  = hovered
+    }
+  })
+
+  useEffect(() => () => geoRef.current?.dispose(), [])
 
   useFrame(({ clock }) => {
-    if (!meshRef.current) return
-    frame.current++
+    if (!meshRef.current || !sway) return
 
-    const now = clock.getElapsedTime()
+    swayTentacle(curve, basePoints, index, clock.getElapsedTime())
 
-    if (revealProgress <= 0) {
-      revealStartRef.current = null
-      meshRef.current.visible = false
-      return
+    const geo = meshRef.current.geometry
+    if (!geo?.attributes?.position) return
+
+    const pos = geo.attributes.position
+    const tmpGeo = new TubeGeometry(curve, segments, radius, 6, false)
+    const tmpPos = tmpGeo.attributes.position
+
+    if (tmpPos.count === pos.count) {
+      pos.array.set(tmpPos.array)
+      pos.needsUpdate = true
     }
-
-    if (revealStartRef.current === null) {
-      revealStartRef.current = now
-    }
-    meshRef.current.visible = true
-
-    if (sway) swayTentacle(curve, basePoints, index, now)
-
-    if (frame.current % 3 !== 0) return
-
-    let tubeCurve = curve
-    let tubeSeg = 24
-
-    if (revealProgress < 1) {
-      const elapsed = now - revealStartRef.current
-      const staggered = Math.max(0, elapsed - delay)
-      const localP = Math.min(staggered / 1.2, revealProgress)
-
-      if (localP < 0.02) {
-        meshRef.current.visible = false
-        return
-      }
-
-      if (localP < 0.99) {
-        const n = Math.max(3, Math.ceil(16 * localP))
-        const pts = []
-        for (let j = 0; j <= n; j++) {
-          pts.push(curve.getPoint((j / n) * localP))
-        }
-        tubeCurve = new CatmullRomCurve3(pts)
-        tubeSeg = n
-      }
-    }
-
-    const old = meshRef.current.geometry
-    meshRef.current.geometry = new TubeGeometry(
-      tubeCurve, tubeSeg, hovered ? 0.042 : 0.022, 6, false,
-    )
-    old?.dispose()
+    tmpGeo.dispose()
   })
 
   return (
@@ -87,3 +82,5 @@ export default function Tentacle({
     </mesh>
   )
 }
+
+export default React.memo(Tentacle)

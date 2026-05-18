@@ -135,7 +135,14 @@ function ThemeSelector({ value, onChange }) {
   )
 }
 
-export default function SettingsPanel({ settings, setSetting, onClose }) {
+export default function SettingsPanel({ settings, setSetting, onClose, onRescan }) {
+  const [rescanning, setRescanning] = useState(false)
+
+  const handleRescan = async () => {
+    setRescanning(true)
+    try { await onRescan?.() } finally { setRescanning(false) }
+  }
+
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 95 }} />
@@ -206,34 +213,61 @@ export default function SettingsPanel({ settings, setSetting, onClose }) {
           onChange={v => setSetting('colorTheme', v)}
         />
 
-        <button
-          onClick={() => {
-            setSetting('autoRotate', true)
-            setSetting('showLabels', true)
-            setSetting('sway', true)
-            setSetting('scanDepth', 2)
-            setSetting('colorTheme', 'dark')
-          }}
-          style={{
-            marginTop: 12, width: '100%',
-            padding: '6px 0',
-            background: 'rgba(110,110,158,0.06)',
-            border: '1px solid rgba(110,110,158,0.18)',
-            borderRadius: 6, cursor: 'pointer',
-            fontFamily: MONO, fontSize: 9,
-            color: 'rgba(110,110,158,0.5)',
-            letterSpacing: '0.04em',
-            transition: 'background 0.15s, color 0.15s',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(124,157,245,0.08)'
-            e.currentTarget.style.color = 'rgba(160,160,220,0.8)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(110,110,158,0.06)'
-            e.currentTarget.style.color = 'rgba(110,110,158,0.5)'
-          }}
-        >reset to defaults</button>
+        <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
+          <button
+            onClick={handleRescan}
+            disabled={rescanning}
+            style={{
+              flex: 1, padding: '6px 0',
+              background: rescanning ? 'rgba(78,205,196,0.08)' : 'rgba(110,110,158,0.06)',
+              border: `1px solid ${rescanning ? 'rgba(78,205,196,0.35)' : 'rgba(110,110,158,0.18)'}`,
+              borderRadius: 6, cursor: rescanning ? 'default' : 'pointer',
+              fontFamily: MONO, fontSize: 9,
+              color: rescanning ? 'rgba(78,205,196,0.8)' : 'rgba(110,110,158,0.5)',
+              letterSpacing: '0.04em',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => {
+              if (!rescanning) {
+                e.currentTarget.style.background = 'rgba(78,205,196,0.08)'
+                e.currentTarget.style.color = 'rgba(78,205,196,0.8)'
+              }
+            }}
+            onMouseLeave={e => {
+              if (!rescanning) {
+                e.currentTarget.style.background = 'rgba(110,110,158,0.06)'
+                e.currentTarget.style.color = 'rgba(110,110,158,0.5)'
+              }
+            }}
+          >{rescanning ? 'rescanning…' : 'rescan  [R]'}</button>
+          <button
+            onClick={() => {
+              setSetting('autoRotate', true)
+              setSetting('showLabels', true)
+              setSetting('sway', true)
+              setSetting('scanDepth', 2)
+              setSetting('colorTheme', 'dark')
+            }}
+            style={{
+              flex: 1, padding: '6px 0',
+              background: 'rgba(110,110,158,0.06)',
+              border: '1px solid rgba(110,110,158,0.18)',
+              borderRadius: 6, cursor: 'pointer',
+              fontFamily: MONO, fontSize: 9,
+              color: 'rgba(110,110,158,0.5)',
+              letterSpacing: '0.04em',
+              transition: 'background 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(124,157,245,0.08)'
+              e.currentTarget.style.color = 'rgba(160,160,220,0.8)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(110,110,158,0.06)'
+              e.currentTarget.style.color = 'rgba(110,110,158,0.5)'
+            }}
+          >reset</button>
+        </div>
       </div>
 
       <style>{`

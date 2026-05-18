@@ -731,3 +731,31 @@ shortcut `useEffect`. No logic changes — pure reorder.
 - Build clean. 29 backend tests pass.
 - Next: PROMPT 26 — export report (markdown snapshot of current view)
   + share link (deep link to a node path)
+
+## PROMPT 27 HANDOFF — Performance Pass
+- Status: COMPLETE
+- Tentacle geo thrash: replaced full TubeGeometry swap with in-place
+  BufferAttribute position update + tmpGeo.dispose(). sway=false →
+  zero allocations per frame. DynamicDrawUsage set on position buffer
+  for efficient GPU re-uploads.
+- LOD: SEGMENTS_HI=24 (≤30 nodes or hovered) vs SEGMENTS_LO=10
+  (>30 nodes, not hovered). Geometry only rebuilt on LOD tier or
+  hover state change (useEffect prev-compare pattern).
+- React.memo: NodeMesh and Tentacle wrapped. handlePointerLeave and
+  handlePointerMove stabilised with useCallback in SceneObjects.
+- Backend cap: MAX_CHILDREN=120 added to config.py. SKIP_DIRS
+  extended with .next, .nuxt, coverage, .parcel-cache, .turbo,
+  vendor, Pods, target, env. build_tree.py applies cap, sets
+  truncated + skipped on node.
+- Concurrent signals: _compute_signals_batch() with
+  ThreadPoolExecutor(max_workers=8) in build_tree.py. Pre-computed
+  signals passed to recursive build_node calls via optional
+  _precomputed_signals param.
+- Frontend cap: SCENE_NODE_CAP=80 in SceneObjects. visibleChildren
+  slices at cap. OverflowBadge renders when capped (amber, top-
+  center, pointer-events:none).
+- /scan-info endpoint: fast child count without signal computation.
+- Tests: perf.test.js (3 new), test_scanner_perf.py (4 new).
+- Frontend: 66 passing. Backend: 36 passing. Build clean.
+- Next: PROMPT 28 — onboarding flow (first-run wizard, directory
+  picker, empty state)
