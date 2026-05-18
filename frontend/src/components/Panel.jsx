@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { openNode } from '../utils/loadTree'
 import { getActiveSignals, SIGNAL_COLORS, SIGNAL_LABELS } from '../utils/signals'
 import { getNodeColor } from '../utils/palette'
+import { useFilePreview } from '../hooks/useFilePreview'
+import { useGitDiff } from '../hooks/useGitDiff'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 
@@ -23,6 +25,8 @@ export default function Panel({ node, onClose, isPinned, onPin, onUnpin }) {
   const [hoverBtn, setHoverBtn] = useState(null)
 
   const nodeColor = getNodeColor(node)
+  const preview = useFilePreview(node)
+  const gitDiff = useGitDiff(node)
 
   const displayPath = node.path.length > 55
     ? '...' + node.path.slice(-55)
@@ -68,6 +72,8 @@ export default function Panel({ node, onClose, isPinned, onPin, onUnpin }) {
       fontFamily: MONO,
       zIndex: 100,
       animation: 'fadeIn 0.2s ease',
+      maxHeight: 'calc(100vh - 80px)',
+      overflowY: 'auto',
     }}>
       <button
         onClick={isPinned ? onUnpin : onPin}
@@ -165,6 +171,130 @@ export default function Panel({ node, onClose, isPinned, onPin, onUnpin }) {
             )
           })}
       </div>
+
+      {node.type === 'file' && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{
+            fontFamily: MONO, fontSize: 8,
+            color: 'rgba(110,110,158,0.5)',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            marginBottom: 6,
+          }}>Preview</div>
+
+          {preview.loading && (
+            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(110,110,158,0.4)', padding: '8px 0' }}>
+              loading…
+            </div>
+          )}
+
+          {preview.error && (
+            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(200,80,80,0.6)' }}>
+              {preview.error}
+            </div>
+          )}
+
+          {preview.lines && (
+            <>
+              <div style={{
+                background: 'rgba(0,0,0,0.35)',
+                border: '1px solid rgba(124,157,245,0.1)',
+                borderRadius: 6,
+                padding: '8px 10px',
+                maxHeight: 180,
+                overflowY: 'auto',
+                overflowX: 'hidden',
+              }}>
+                {preview.lines.map((line, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, lineHeight: 1.55 }}>
+                    <span style={{
+                      fontFamily: MONO, fontSize: 9,
+                      color: 'rgba(110,110,158,0.3)',
+                      userSelect: 'none', flexShrink: 0,
+                      width: 24, textAlign: 'right', paddingTop: 1,
+                    }}>{i + 1}</span>
+                    <span style={{
+                      fontFamily: MONO, fontSize: 9.5,
+                      color: 'rgba(200,210,240,0.75)',
+                      whiteSpace: 'pre', overflow: 'hidden',
+                      textOverflow: 'ellipsis', display: 'block',
+                      maxWidth: 190,
+                    }}>{line || ' '}</span>
+                  </div>
+                ))}
+              </div>
+              {preview.truncated && (
+                <div style={{
+                  fontFamily: MONO, fontSize: 8,
+                  color: 'rgba(110,110,158,0.4)',
+                  marginTop: 4, textAlign: 'right',
+                }}>
+                  showing 60 of {preview.total} lines
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {(activeSignals.includes('gitDirty') || activeSignals.includes('gitUnpushed')) && (
+        <div style={{ marginTop: 10 }}>
+          <div style={{
+            fontFamily: MONO, fontSize: 8,
+            color: 'rgba(110,110,158,0.5)',
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            marginBottom: 6,
+          }}>Git changes</div>
+
+          {gitDiff.loading && (
+            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(110,110,158,0.4)' }}>
+              loading…
+            </div>
+          )}
+
+          {gitDiff.summary && (
+            <div style={{
+              fontFamily: MONO, fontSize: 9,
+              color: 'rgba(200,200,230,0.6)',
+              marginBottom: 6, lineHeight: 1.5,
+            }}>{gitDiff.summary}</div>
+          )}
+
+          {gitDiff.diff && gitDiff.diff.length > 0 && (
+            <div style={{
+              background: 'rgba(0,0,0,0.35)',
+              border: '1px solid rgba(124,157,245,0.1)',
+              borderRadius: 6,
+              padding: '6px 10px',
+              maxHeight: 140,
+              overflowY: 'auto',
+            }}>
+              {gitDiff.diff.map((line, i) => {
+                const isAdd  = line.startsWith('+') && !line.startsWith('+++')
+                const isDel  = line.startsWith('-') && !line.startsWith('---')
+                const isHunk = line.startsWith('@@')
+                return (
+                  <div key={i} style={{
+                    fontFamily: MONO, fontSize: 8.5,
+                    lineHeight: 1.5,
+                    color: isAdd  ? 'rgba(78,205,196,0.8)'
+                         : isDel  ? 'rgba(255,107,107,0.7)'
+                         : isHunk ? 'rgba(124,157,245,0.6)'
+                         :          'rgba(160,160,200,0.45)',
+                    whiteSpace: 'pre', overflow: 'hidden',
+                    textOverflow: 'ellipsis', maxWidth: 210,
+                  }}>{line || ' '}</div>
+                )
+              })}
+            </div>
+          )}
+
+          {gitDiff.error && (
+            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(200,80,80,0.6)' }}>
+              {gitDiff.error}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
