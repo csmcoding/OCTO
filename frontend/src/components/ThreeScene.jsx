@@ -271,8 +271,8 @@ function SceneBackground({ colorTheme }) {
   const { gl, scene } = useThree()
   useEffect(() => {
     const themes = {
-      dark:      { bg: '#050508', fogColor: '#050508', density: 0.045 },
-      deepspace: { bg: '#04040f', fogColor: '#020210', density: 0.055 },
+      dark:      { bg: '#0d1018', fogColor: '#111827', density: 0.026 },
+      deepspace: { bg: '#090b12', fogColor: '#0b1020', density: 0.038 },
     }
     const t = themes[colorTheme] ?? themes.dark
     gl.setClearColor(t.bg, 1)
@@ -290,7 +290,7 @@ function AnimatedFillLight() {
     lightRef.current.position.set(Math.sin(t) * 9, 3, Math.cos(t) * 9)
   })
   return (
-    <pointLight ref={lightRef} intensity={0.6} color="#1a2a6c" distance={22} decay={2} />
+    <pointLight ref={lightRef} intensity={0.72} color="#314a9f" distance={22} decay={2} />
   )
 }
 
@@ -355,18 +355,19 @@ function SceneObjects({
         args={[30, 30]}
         cellSize={1}
         cellThickness={0.3}
-        cellColor="#1a1a3a"
+        cellColor="#1e2040"
         sectionSize={5}
         sectionThickness={0.8}
-        sectionColor="#2a2a4a"
+        sectionColor="#2e3055"
         fadeDistance={20}
         fadeStrength={2}
         infiniteGrid
       />
 
-      <ambientLight intensity={0.08} color="#06061a" />
-      <pointLight position={[0, 0, 0]} intensity={2.4} color="#4ecdc4" distance={14} decay={2} />
-      <pointLight position={[0, 10, 0]} intensity={0.5} color="#ffffff" distance={24} decay={2} />
+      <ambientLight intensity={0.16} color="#d8e6ff" />
+      <pointLight position={[0, 0, 0]}  intensity={2.1} color="#6ee7dc" distance={15} decay={2} />
+      <pointLight position={[0, 10, 2]} intensity={0.85} color="#ffffff" distance={26} decay={2} />
+      <pointLight position={[-8, 4, -6]} intensity={0.45} color="#7aa2ff" distance={22} decay={2} />
       <AnimatedFillLight />
 
       {parentNode && (
@@ -824,6 +825,11 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           isPinned={pins.some(p => p.id === selectedNode?.id)}
           onPin={() => handlePin(selectedNode)}
           onUnpin={() => handleUnpin(selectedNode)}
+          onDrillIn={handleDrillIn}
+          onRescan={handleRescan}
+          onExport={() => { const md = exportMarkdown({ currentRoot, navStack, pins }); downloadMarkdown(md) }}
+          depth={navStack.length}
+          rootPath={currentRoot?.path}
         />
       )}
       {showBack && (

@@ -759,3 +759,148 @@ shortcut `useEffect`. No logic changes — pure reorder.
 - Frontend: 66 passing. Backend: 36 passing. Build clean.
 - Next: PROMPT 28 — onboarding flow (first-run wizard, directory
   picker, empty state)
+
+## PROMPT 28 HANDOFF — Onboarding + Directory Picker
+- Status: COMPLETE
+- New: Onboarding.jsx — 3 states (WELCOME, BROWSING, LOADING).
+  OCTO wordmark + "your codebase. alive." tagline. Path input with
+  400ms debounced /api/validate; teal border on valid, amber on
+  invalid. Browse filesystem inline (not modal). Recent dirs from
+  /api/recents with hover arrow slide. Mini 3D DemoOrb (Canvas +
+  6 Tentacles, swaying) as right-column live preview. Responsive
+  flex layout wraps to single column on narrow viewports.
+- New: ChangeRootButton.jsx — ⌂ at bottom:180 left:20 (above share
+  ⬡ at 148, export ↓ at 116, gear ⚙ at 84, ? at 56).
+- New: /api/browse — lists subdirs only, hides dotfiles (except
+  .config), returns parent path for ← nav.
+- New: /api/recents GET — reads ~/.octo/recents.json, filters
+  deleted paths, returns last 5.
+- New: /api/recents POST — adds to recents (RecentRequest model),
+  deduplicates, caps at 5.
+- New: /api/validate — quick path existence + isDir check.
+- New: /api/config — returns OCTO_ROOT env + hasConfiguredRoots
+  (true if any SCAN_ROOTS path exists). App.jsx uses this to skip
+  onboarding when already configured.
+- Updated: App.jsx — rootPath + showOnboarding + transitioning state.
+  Fetches /api/config after backend ready. 400ms opacity fade on
+  route change. Onboarding → Dashboard swap without losing ThreeScene
+  state across same root.
+- Updated: Dashboard.jsx — passes rootPath + onChangeRoot to
+  ThreeScene.
+- Updated: ThreeScene.jsx — accepts rootPath + onChangeRoot props.
+  Initial load uses loadSubtree(rootPath,2) when rootPath set, else
+  loadTree(2). useEffect deps on [rootPath] so re-runs on root
+  change. O key → onChangeRoot. O added to KeyboardLegend. Renders
+  ChangeRootButton when onChangeRoot provided.
+- Tests: onboarding.test.js (4 frontend), test_onboarding.py (6
+  backend). All using asyncio.run() pattern.
+- Frontend: 70 passing. Backend: 42 passing. Build clean.
+- Next: PROMPT 29 — aesthetic overhaul (fresnel shader, depth fog,
+  marine snow particles, signal auras, hover ripple)
+
+## PROMPT 29 HANDOFF — Aesthetic Overhaul
+- Status: COMPLETE
+- Fresnel glow: custom ShaderMaterial on NodeMesh spheres
+  (dark center, bright rim, pulse + hover/select uniforms)
+- Depth fog: FogExp2 in SceneBackground, color-theme-aware
+- Marine snow: 400 additive particles, drift+respawn,
+  sway-setting-aware
+- Signal auras: billboard RingGeometry per active-signal node,
+  opacity pulse + scale breathe
+- Hover ripple: HoverRipple.jsx triggered by hoveredEndPos,
+  single-shot expand+fade animation
+- Animated fill light: slow-orbit pointLight in SceneObjects
+- Tentacle material: opacity reduced, emissiveIntensity lowered
+  so node spheres are the primary visual anchor
+- Tests: aesthetics.test.js (4 tests), all suites green
+- Build: clean
+- Next: PROMPT 30 — node detail panel redesign + file preview
+
+## BUG FIX — APIBASE + Browse Init + App Routing
+- Root cause: API_BASE constant survived partial fix attempts,
+  still used in openBrowser, causing CORS failures on all
+  browse/validate/recents fetches (Vite dev server was not
+  proxying those requests to the backend)
+- Fix 1: Added Vite proxy in vite.config.js — /api/* and /health
+  forwarded to http://localhost:7823
+- Fix 2: All fetch calls now use relative /api/* paths,
+  API_BASE constant deleted from both Onboarding.jsx and App.jsx
+- Fix 3: App.jsx already used hard if/return conditional — confirmed
+  Onboarding and Dashboard never mount simultaneously
+- Fix 4: Onboarding root div already had position fixed, inset 0,
+  zIndex 1000 — confirmed correct
+- Fix 5: DemoOrb Canvas + wrapper already had pointerEvents none —
+  confirmed correct
+- Verified: grep returns 0 API_BASE/localhost lines in both files
+- All tests pass (74 frontend, 42 backend), build clean
+- Next: PROMPT 30 — node detail panel redesign + file preview
+
+## HOTFIX — Vite Proxy + Dev Server Restart
+- Root cause: vite.config.js proxy was written but dev server
+  was not restarted — proxy config requires server restart.
+  Additionally, loadTree.js, useGitDiff.js, useFilePreview.js,
+  and the loadTree test file still had API_BASE/localhost refs
+  that were missed in the previous fix pass.
+- Fixed: vite.config.js updated to proxy all backend routes
+  (/api, /health, /tree, /subtree, /scan, /open, /settings,
+  /preview, /git-diff, /scan-info, /node) to http://localhost:7823
+- Fixed: removed API_BASE from loadTree.js, useGitDiff.js,
+  useFilePreview.js — all fetch calls now use relative paths
+- Fixed: loadTree.test.js updated to expect relative URL paths
+- Fixed: killed stale backend process (started before /api/browse
+  routes were added) and restarted from project root
+- Verified: curl http://localhost:5173/api/browse returns JSON
+  directory listing — proxy end-to-end confirmed
+- 0 localhost refs remain in frontend/src/
+- All tests pass (74 frontend, 42 backend), build clean
+- Next: PROMPT 30 — node detail panel redesign + file preview
+
+## PROMPT 30 HANDOFF — Node Detail Panel Redesign
+- Status: COMPLETE
+- Rewrote Panel.jsx: 5 sections (header, metrics, signals, file preview, actions)
+  - NODE HEADER: 18px name, type badge (folder/file pill), relative path,
+    close × and pin ★ buttons
+  - METRICS ROW: MetricChip grid (children, files, signals, depth) — only
+    non-zero chips shown; dark surface + teal border
+  - SIGNAL LIST: colored left-dot rows with human-readable labels, teal
+    hover highlight; shows "✓ Clean" when no signals
+  - FILE PREVIEW: fetches /api/preview (content string, 20 lines),
+    Prism.js syntax highlighting via esm.sh CDN (/* @vite-ignore */),
+    line numbers, "Open in editor →" ghost button → /api/open
+  - ACTIONS ROW: Drill in (folders only), Rescan, Copy path, Export,
+    plus existing Open in Cursor/Dolphin/Konsole buttons
+  - Retained git-diff section for gitDirty/gitUnpushed nodes
+- Panel is now a right-side drawer (320px, fixed right:0 top:0 bottom:0,
+  z-index 500) with 240ms cubic-bezier slide-in entrance animation
+- Exported detectLang, buildTypeBadge, buildMetrics, buildActions as
+  pure functions for testability
+- Backend: /api/preview (returns content string, total_lines, language,
+  truncated flag) and /api/open (tries code → open → xdg-open)
+- ThreeScene.jsx: Panel now receives onDrillIn, onRescan, onExport,
+  depth, rootPath props
+- Tests: panel.test.js (11 tests), test_preview.py (+5 tests = 47 total)
+- All suites green (85 frontend, 47 backend), build clean
+- Next: PROMPT 31 — search panel redesign + fuzzy matching
+
+## PROMPT 30 HANDOFF — Panel Redesign + Lighter Default Theme
+- Status: COMPLETE
+- Panel.jsx was already rewritten (5-section right drawer from previous pass):
+  header, metrics, signals, file preview, actions
+- /api/preview and /api/open backend endpoints already added
+- Prism.js CDN syntax highlighting already wired
+- THIS PASS: lightened default visual theme
+  - SceneBackground dark: bg #050508 → #0d1018, fog density 0.045 → 0.026
+  - SceneBackground deepspace: bg #04040f → #090b12, density 0.055 → 0.038
+  - Ambient: intensity 0.08 #06061a → 0.16 #d8e6ff
+  - Center point: 2.4 #4ecdc4 → 2.1 #6ee7dc, distance 14 → 15
+  - Top point: 0.5 → 0.85 #ffffff, y=10 → y=10,z=2, distance 24 → 26
+  - Added 3rd fill: intensity 0.45 #7aa2ff at [-8,4,-6]
+  - AnimatedFillLight: #1a2a6c 0.6 → #314a9f 0.72
+  - Tentacles: color #030308 → #0d1320, opacity 0.45 → 0.58,
+    emissiveIntensity 0.08 → 0.10 (0.14 when hovered)
+  - Node labels: color alpha e6 → f2, textShadow 8px → 10px + dark backdrop
+  - Grid cells: #1a1a3a → #1e2040, sections #2a2a4a → #2e3055
+  - colorTheme default confirmed as 'dark' (not 'deepspace')
+- Tests: 86 frontend (added test 11 — default theme is 'dark'), 47 backend
+- All suites green, build clean
+- Next: PROMPT 31 — search panel redesign + fuzzy matching + keyboard-first navigation

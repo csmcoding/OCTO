@@ -172,13 +172,13 @@ function NodeMesh({
           style={{ pointerEvents: 'none' }}
         >
           <div style={{
-            color: nodeColor + 'e6',
+            color: nodeColor + 'f2',
             fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
             fontSize: '11px',
             fontWeight: 500,
             whiteSpace: 'nowrap',
             textAlign: 'center',
-            textShadow: `0 0 8px ${nodeColor}`,
+            textShadow: `0 0 10px ${nodeColor}, 0 0 4px rgba(0,0,0,0.8)`,
             userSelect: 'none',
             maxWidth: '80px',
             overflow: 'hidden',

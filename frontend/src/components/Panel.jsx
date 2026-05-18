@@ -1,300 +1,530 @@
-import { useState } from 'react'
-import { openNode } from '../utils/loadTree'
+import { useState, useEffect } from 'react'
 import { getActiveSignals, SIGNAL_COLORS, SIGNAL_LABELS } from '../utils/signals'
 import { getNodeColor } from '../utils/palette'
-import { useFilePreview } from '../hooks/useFilePreview'
+import { openNode } from '../utils/loadTree'
 import { useGitDiff } from '../hooks/useGitDiff'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
+const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
 
-const ACTIONS = [
+const EXT_LANG = {
+  js: 'javascript', mjs: 'javascript', cjs: 'javascript',
+  jsx: 'jsx', ts: 'typescript', tsx: 'tsx',
+  py: 'python', json: 'json', css: 'css', scss: 'css',
+  md: 'markdown', sh: 'bash', bash: 'bash',
+  html: 'markup', xml: 'markup', yaml: 'yaml', yml: 'yaml',
+  rs: 'rust', go: 'go', java: 'java', c: 'c', cpp: 'cpp',
+  rb: 'ruby', php: 'php', swift: 'swift', kt: 'kotlin',
+}
+
+export function detectLang(path = '') {
+  const ext = (path.split('.').pop() ?? '').toLowerCase()
+  return EXT_LANG[ext] ?? 'text'
+}
+
+export function buildTypeBadge(node) {
+  return node.type === 'folder' ? 'folder' : 'file'
+}
+
+export function buildMetrics(node, activeSignals, depth) {
+  const folderCount = node.type === 'folder'
+    ? (node.childCount ?? node.children?.length ?? 0)
+    : 0
+  const fileCount = (node.children ?? []).filter(c => c.type === 'file').length
+  return [
+    node.type === 'folder' && folderCount > 0 && { icon: '📁', value: folderCount, label: 'children' },
+    node.type === 'folder' && fileCount > 0    && { icon: '📄', value: fileCount,   label: 'files'    },
+    activeSignals.length > 0                   && { icon: '⚠️', value: activeSignals.length, label: 'signals' },
+    depth > 0                                  && { icon: '↕',  value: depth,        label: 'depth'    },
+  ].filter(Boolean)
+}
+
+export function buildActions(node, { onDrillIn, onRescan, onExport } = {}) {
+  return [
+    node.type === 'folder' && onDrillIn && { key: 'drill',  icon: '⟫', label: 'Drill in',   onClick: () => onDrillIn(node) },
+    onRescan                             && { key: 'rescan', icon: '↻', label: 'Rescan',      onClick: onRescan },
+                                            { key: 'copy',   icon: '⧉', label: 'Copy path',  onClick: null },
+    onExport                             && { key: 'export', icon: '↓', label: 'Export',      onClick: onExport },
+  ].filter(Boolean)
+}
+
+// Prism singleton — loaded once from CDN at runtime, fails gracefully in tests
+let _prismPromise = null
+function loadPrism() {
+  if (_prismPromise) return _prismPromise
+  _prismPromise = import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0')
+    .then(async mod => {
+      const P = mod.default
+      await Promise.allSettled([
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-jsx.js'),
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-typescript.js'),
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-tsx.js'),
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-python.js'),
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-bash.js'),
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-yaml.js'),
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-markdown.js'),
+        import(/* @vite-ignore */ 'https://esm.sh/prismjs@1.29.0/components/prism-rust.js'),
+      ])
+      if (!document.getElementById('prism-theme')) {
+        const link = document.createElement('link')
+        link.id = 'prism-theme'
+        link.rel = 'stylesheet'
+        link.href = 'https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css'
+        document.head.appendChild(link)
+      }
+      return P
+    })
+    .catch(() => null)
+  return _prismPromise
+}
+
+function usePanelPreview(node) {
+  const [state, setState] = useState({
+    content: null, language: 'text',
+    truncated: false, total: 0,
+    loading: false, error: null,
+  })
+  useEffect(() => {
+    if (!node || node.type !== 'file' || !node.path) {
+      setState({ content: null, language: 'text', truncated: false, total: 0, loading: false, error: null })
+      return
+    }
+    let cancelled = false
+    setState(s => ({ ...s, loading: true, error: null }))
+    fetch(`/api/preview?path=${encodeURIComponent(node.path)}&lines=20`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return
+        if (data.detail || data.error) {
+          setState(s => ({ ...s, loading: false, error: data.detail ?? data.error }))
+        } else {
+          setState({
+            content: data.content, language: data.language ?? 'text',
+            truncated: data.truncated, total: data.total_lines ?? 0,
+            loading: false, error: null,
+          })
+        }
+      })
+      .catch(e => { if (!cancelled) setState(s => ({ ...s, loading: false, error: e.message })) })
+    return () => { cancelled = true }
+  }, [node?.path, node?.type])
+  return state
+}
+
+function MetricChip({ icon, value, label }) {
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center',
+      background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(78,205,196,0.18)',
+      borderRadius: 8, padding: '6px 10px', minWidth: 52, gap: 2,
+    }}>
+      <span style={{ fontSize: 11 }}>{icon}</span>
+      <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: '#e2e2f2', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.6)', letterSpacing: '0.04em' }}>{label}</span>
+    </div>
+  )
+}
+
+const SIGNAL_HUMAN = {
+  ...SIGNAL_LABELS,
+  largefile: 'Large file',
+  todoDensity: 'High TODO density',
+  deepNesting: 'Deep nesting',
+}
+
+function SignalRow({ signalKey }) {
+  const [hov, setHov] = useState(false)
+  const color = SIGNAL_COLORS[signalKey] ?? '#888'
+  return (
+    <div
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '4px 6px', borderRadius: 6, marginBottom: 1,
+        background: hov ? 'rgba(78,205,196,0.06)' : 'transparent',
+        transition: 'background 0.12s',
+      }}
+    >
+      <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, flexShrink: 0, display: 'inline-block' }} />
+      <span style={{ fontFamily: MONO, fontSize: 11, color, flex: 1 }}>
+        {SIGNAL_HUMAN[signalKey] ?? signalKey}
+      </span>
+    </div>
+  )
+}
+
+function FilePreviewSection({ node }) {
+  const preview = usePanelPreview(node)
+  const [prism, setPrism] = useState(null)
+  const [highlighted, setHighlighted] = useState([])
+  const [openStatus, setOpenStatus] = useState('idle')
+  const lang = detectLang(node.path)
+
+  useEffect(() => {
+    loadPrism().then(P => { if (P) setPrism(P) })
+  }, [])
+
+  useEffect(() => {
+    if (!preview.content) { setHighlighted([]); return }
+    if (!prism) { setHighlighted(preview.content.split('\n')); return }
+    try {
+      const grammar = prism.languages[lang] ?? null
+      if (!grammar) { setHighlighted(preview.content.split('\n')); return }
+      const html = prism.highlight(preview.content, grammar, lang)
+      setHighlighted(html.split('\n'))
+    } catch {
+      setHighlighted(preview.content.split('\n'))
+    }
+  }, [preview.content, prism, lang])
+
+  const handleOpenInEditor = async () => {
+    setOpenStatus('opening')
+    try {
+      const r = await fetch(`/api/open?path=${encodeURIComponent(node.path)}`)
+      const d = await r.json()
+      setOpenStatus(d.ok ? 'ok' : 'error')
+      setTimeout(() => setOpenStatus('idle'), 2000)
+    } catch {
+      setOpenStatus('error')
+      setTimeout(() => setOpenStatus('idle'), 3000)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+        Preview
+      </div>
+      {preview.loading && (
+        <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(120,120,175,0.45)', padding: '6px 0' }}>loading…</div>
+      )}
+      {preview.error && (
+        <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(200,80,80,0.6)' }}>{preview.error}</div>
+      )}
+      {preview.content != null && !preview.loading && (
+        <>
+          <div style={{
+            background: '#0a0a12',
+            border: '1px solid rgba(78,205,196,0.12)',
+            borderRadius: 6, padding: '8px 0',
+            maxHeight: 240, overflowY: 'auto', overflowX: 'auto',
+          }}>
+            {preview.content.split('\n').map((rawLine, i, arr) => {
+              if (i === arr.length - 1 && rawLine === '') return null
+              const htmlLine = highlighted[i] ?? rawLine
+              return (
+                <div key={i} style={{ display: 'flex', lineHeight: 1.6, minHeight: '1.6em' }}>
+                  <span style={{
+                    fontFamily: MONO, fontSize: 10,
+                    color: 'rgba(120,120,175,0.3)', userSelect: 'none',
+                    flexShrink: 0, width: 28, textAlign: 'right',
+                    paddingRight: 10, fontVariantNumeric: 'tabular-nums',
+                  }}>{i + 1}</span>
+                  {prism && highlighted.length ? (
+                    <span
+                      className={`language-${lang}`}
+                      style={{ fontFamily: MONO, fontSize: 10.5, whiteSpace: 'pre', flex: 1 }}
+                      dangerouslySetInnerHTML={{ __html: htmlLine || ' ' }}
+                    />
+                  ) : (
+                    <span style={{ fontFamily: MONO, fontSize: 10.5, color: 'rgba(200,210,240,0.75)', whiteSpace: 'pre' }}>
+                      {rawLine || ' '}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+          {preview.truncated && (
+            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.4)', marginTop: 3, textAlign: 'right' }}>
+              showing 20 of {preview.total} lines
+            </div>
+          )}
+          <button
+            onClick={handleOpenInEditor}
+            style={{
+              marginTop: 8, background: 'none', border: 'none', padding: 0,
+              color: openStatus === 'ok' ? '#3dffa0' : openStatus === 'error' ? '#ff4466' : 'rgba(78,205,196,0.7)',
+              fontFamily: MONO, fontSize: 11, cursor: 'pointer',
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => { if (openStatus === 'idle') e.currentTarget.style.color = '#4ecdc4' }}
+            onMouseLeave={e => { if (openStatus === 'idle') e.currentTarget.style.color = 'rgba(78,205,196,0.7)' }}
+          >
+            {openStatus === 'opening' ? 'opening…' : openStatus === 'ok' ? '✓ opened' : openStatus === 'error' ? '✗ failed' : 'Open in editor →'}
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+function GitDiffSection({ gitDiff }) {
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+        Git Changes
+      </div>
+      {gitDiff.loading && <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(120,120,175,0.4)' }}>loading…</div>}
+      {gitDiff.summary && (
+        <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(200,200,230,0.6)', marginBottom: 6, lineHeight: 1.5 }}>{gitDiff.summary}</div>
+      )}
+      {gitDiff.diff && gitDiff.diff.length > 0 && (
+        <div style={{
+          background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(124,157,245,0.1)',
+          borderRadius: 6, padding: '6px 10px', maxHeight: 140, overflowY: 'auto',
+        }}>
+          {gitDiff.diff.map((line, i) => {
+            const isAdd  = line.startsWith('+') && !line.startsWith('+++')
+            const isDel  = line.startsWith('-') && !line.startsWith('---')
+            const isHunk = line.startsWith('@@')
+            return (
+              <div key={i} style={{
+                fontFamily: MONO, fontSize: 9, lineHeight: 1.5,
+                color: isAdd  ? 'rgba(78,205,196,0.8)'
+                     : isDel  ? 'rgba(255,107,107,0.7)'
+                     : isHunk ? 'rgba(124,157,245,0.6)'
+                     :          'rgba(160,160,200,0.45)',
+                whiteSpace: 'pre', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+              }}>{line || ' '}</div>
+            )
+          })}
+        </div>
+      )}
+      {gitDiff.error && (
+        <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(200,80,80,0.6)' }}>{gitDiff.error}</div>
+      )}
+    </div>
+  )
+}
+
+const OPEN_ACTIONS = [
   { action: 'editor',   label: 'Open in Cursor',  foldersOnly: false },
   { action: 'files',    label: 'Open in Dolphin', foldersOnly: true  },
   { action: 'terminal', label: 'Open in Konsole', foldersOnly: true  },
 ]
 
-function statusLabel(status, defaultLabel) {
+function openStatusLabel(status, defaultLabel) {
   if (!status || status === 'idle') return { text: defaultLabel, color: '#7c9df5' }
-  if (status === 'opening') return { text: 'opening...', color: '#6e6e9e' }
-  if (status === 'ok')      return { text: '✓ opened',   color: '#3dffa0' }
-  return                           { text: '✗ failed',   color: '#ff4466' }
+  if (status === 'opening') return { text: 'opening…',  color: '#6e6e9e' }
+  if (status === 'ok')      return { text: '✓ opened',  color: '#3dffa0' }
+  return                           { text: '✗ failed',  color: '#ff4466' }
 }
 
-export default function Panel({ node, onClose, isPinned, onPin, onUnpin }) {
+export default function Panel({
+  node,
+  onClose,
+  isPinned,
+  onPin,
+  onUnpin,
+  onDrillIn,
+  onRescan,
+  onExport,
+  depth = 0,
+  rootPath,
+}) {
+  const [mounted, setMounted]     = useState(false)
   const [openStatus, setOpenStatus] = useState({})
-  const [hoverBtn, setHoverBtn] = useState(null)
+  const [hoverBtn, setHoverBtn]   = useState(null)
+  const [copiedPath, setCopiedPath] = useState(false)
 
-  const nodeColor = getNodeColor(node)
-  const preview = useFilePreview(node)
-  const gitDiff = useGitDiff(node)
-
-  const displayPath = node.path.length > 55
-    ? '...' + node.path.slice(-55)
-    : node.path
-
+  const gitDiff      = useGitDiff(node)
   const activeSignals = getActiveSignals(node)
 
-  const handleOpen = async (action) => {
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 16)
+    return () => clearTimeout(t)
+  }, [])
+
+  const relPath = (() => {
+    if (!node.path) return ''
+    if (!rootPath) {
+      return node.path.length > 52 ? '…' + node.path.slice(-52) : node.path
+    }
+    const rel = node.path.startsWith(rootPath)
+      ? node.path.slice(rootPath.length).replace(/^\//, '')
+      : node.path
+    return rel || node.name
+  })()
+
+  const handleOpenApp = async (action) => {
     setOpenStatus(prev => ({ ...prev, [action]: 'opening' }))
     try {
       const result = await openNode(node.path, action)
       if (result.ok) {
         setOpenStatus(prev => ({ ...prev, [action]: 'ok' }))
         setTimeout(() => setOpenStatus(prev => ({ ...prev, [action]: 'idle' })), 2000)
-      } else {
-        throw new Error(result.error ?? 'failed')
-      }
-    } catch (err) {
-      console.error('open failed:', err)
+      } else throw new Error(result.error ?? 'failed')
+    } catch {
       setOpenStatus(prev => ({ ...prev, [action]: 'error' }))
       setTimeout(() => setOpenStatus(prev => ({ ...prev, [action]: 'idle' })), 3000)
     }
   }
 
+  const handleCopyPath = () => {
+    navigator.clipboard.writeText(node.path).then(() => {
+      setCopiedPath(true)
+      setTimeout(() => setCopiedPath(false), 1500)
+    }).catch(() => {})
+  }
+
+  const typeColor  = node.type === 'folder' ? '#c8a2ff' : '#4ecdc4'
+  const typeBadge  = buildTypeBadge(node)
+  const metrics    = buildMetrics(node, activeSignals, depth)
+  const actionBtns = buildActions(node, { onDrillIn, onRescan, onExport })
+
   return (
     <div style={{
-      position: 'fixed',
-      bottom: 56,
-      left: 20,
-      width: 268,
-      background: 'rgba(8, 8, 22, 0.90)',
-      border: '1px solid rgba(124,157,245,0.15)',
-      borderTop: `2px solid ${nodeColor}`,
-      borderRadius: 12,
-      backdropFilter: 'blur(24px) saturate(160%)',
-      WebkitBackdropFilter: 'blur(24px) saturate(160%)',
-      boxShadow: [
-        '0 0 0 1px rgba(124,157,245,0.05)',
-        '0 24px 64px rgba(0,0,0,0.85)',
-        'inset 0 1px 0 rgba(255,255,255,0.04)',
-      ].join(', '),
-      padding: '16px 18px',
-      fontFamily: MONO,
-      zIndex: 100,
-      animation: 'fadeIn 0.2s ease',
-      maxHeight: 'calc(100vh - 80px)',
+      position: 'fixed', right: 0, top: 0, bottom: 0,
+      width: 320,
+      background: '#0f0f14',
+      borderLeft: '1px solid rgba(78,205,196,0.15)',
+      zIndex: 500,
       overflowY: 'auto',
+      padding: '20px 16px 32px',
+      boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+      fontFamily: SANS,
+      transform: mounted ? 'translateX(0)' : 'translateX(100%)',
+      transition: 'transform 240ms cubic-bezier(0.16,1,0.3,1)',
     }}>
-      <button
-        onClick={isPinned ? onUnpin : onPin}
-        title={isPinned ? 'Unpin' : 'Pin to tray'}
-        style={{
-          position: 'absolute', top: 14, right: 36,
-          background: 'none', border: 'none',
-          color: isPinned ? '#ffd93d' : 'rgba(110,110,158,0.45)',
-          cursor: 'pointer', fontSize: 13,
-          transition: 'color 0.15s, transform 0.15s',
-          lineHeight: 1,
-        }}
-        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.25)'}
-        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-      >
-        {isPinned ? '★' : '☆'}
-      </button>
 
+      {/* ── SECTION 1: NODE HEADER ─────────────────────── */}
+      <div style={{ paddingRight: 56, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
+          <span style={{
+            fontSize: 18, fontWeight: 700, color: '#f0f0f8',
+            letterSpacing: '-0.02em',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+          }}>
+            {node.name}
+          </span>
+          <span style={{
+            fontFamily: MONO, fontSize: 10, fontWeight: 600,
+            letterSpacing: '0.05em', textTransform: 'uppercase',
+            background: typeColor + '22', color: typeColor,
+            border: `1px solid ${typeColor}44`,
+            borderRadius: 4, padding: '1px 6px', flexShrink: 0,
+          }}>{typeBadge}</span>
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(120,120,175,0.55)', wordBreak: 'break-all', lineHeight: 1.5 }}>
+          {relPath}
+        </div>
+      </div>
+
+      {/* Pin + Close absolute buttons */}
+      {onPin && (
+        <button
+          onClick={isPinned ? onUnpin : onPin}
+          title={isPinned ? 'Unpin' : 'Pin'}
+          style={{
+            position: 'absolute', top: 16, right: 42,
+            background: 'none', border: 'none',
+            color: isPinned ? '#ffd93d' : 'rgba(110,110,158,0.35)',
+            cursor: 'pointer', fontSize: 13, lineHeight: 1,
+            transition: 'color 0.15s, transform 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.25)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+        >{isPinned ? '★' : '☆'}</button>
+      )}
       <button
         onClick={onClose}
         style={{
-          position: 'absolute',
-          top: 10,
-          right: 12,
-          background: 'none',
-          border: 'none',
-          color: '#3a3a5e',
-          fontSize: 15,
-          cursor: 'pointer',
-          padding: '0 2px',
-          lineHeight: 1,
-          fontFamily: MONO,
+          position: 'absolute', top: 14, right: 14,
+          background: 'none', border: 'none',
+          color: 'rgba(120,120,175,0.45)', fontSize: 18,
+          cursor: 'pointer', lineHeight: 1, padding: '0 2px',
           transition: 'color 0.12s',
         }}
-        onMouseEnter={e => e.target.style.color = '#e2e2f2'}
-        onMouseLeave={e => e.target.style.color = '#3a3a5e'}
-      >
-        ×
-      </button>
+        onMouseEnter={e => e.currentTarget.style.color = '#e2e2f2'}
+        onMouseLeave={e => e.currentTarget.style.color = 'rgba(120,120,175,0.45)'}
+      >×</button>
 
-      <div style={{ fontFamily: "'Outfit', 'Inter', sans-serif", fontSize: 15, fontWeight: 600, color: nodeColor, letterSpacing: '-0.01em', marginBottom: 3, paddingRight: 22, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-        {node.name}
-      </div>
-      <div style={{ fontSize: 9, color: 'rgba(110,110,158,0.55)', marginBottom: 10, wordBreak: 'break-all', lineHeight: 1.5 }}>
-        {displayPath}
-      </div>
+      <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '0 0 14px' }} />
 
-      <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '0 0 10px' }} />
+      {/* ── SECTION 2: METRICS ROW ──────────────────────── */}
+      {metrics.length > 0 && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+          {metrics.map(m => <MetricChip key={m.label} icon={m.icon} value={m.value} label={m.label} />)}
+        </div>
+      )}
 
-      <div style={{ marginBottom: 11 }}>
+      {/* ── SECTION 3: SIGNAL LIST ──────────────────────── */}
+      <div style={{ marginBottom: 16 }}>
         {activeSignals.length === 0 ? (
-          <span style={{ fontSize: 11, color: '#3dffa0' }}>✓ Clean</span>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: '#3dffa0' }}>✓ Clean</span>
         ) : (
-          activeSignals.map(key => (
-            <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-              <span style={{
-                display: 'inline-block', width: 7, height: 7,
-                borderRadius: '50%', background: SIGNAL_COLORS[key], flexShrink: 0,
-              }} />
-              <span style={{ fontSize: 11, color: SIGNAL_COLORS[key] }}>
-                {SIGNAL_LABELS[key]}
-              </span>
+          <>
+            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+              Active Signals
             </div>
-          ))
+            {activeSignals.map(key => <SignalRow key={key} signalKey={key} />)}
+          </>
         )}
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {ACTIONS
-          .filter(({ foldersOnly }) => !foldersOnly || node.type === 'folder')
-          .map(({ action, label }) => {
-            const st = statusLabel(openStatus[action], label)
-            const isHov = hoverBtn === action
-            return (
-              <button
-                key={action}
-                style={{
-                  fontFamily: MONO,
-                  fontSize: 10,
-                  padding: '5px 10px',
-                  borderRadius: 6,
-                  background: isHov ? 'rgba(124,157,245,0.16)' : 'rgba(124,157,245,0.07)',
-                  border: `1px solid ${isHov ? 'rgba(124,157,245,0.38)' : 'rgba(124,157,245,0.18)'}`,
-                  color: isHov ? '#e2e2f2' : st.color,
-                  letterSpacing: '0.02em',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s, border-color 0.15s',
-                }}
-                onClick={() => handleOpen(action)}
-                onMouseEnter={() => setHoverBtn(action)}
-                onMouseLeave={() => setHoverBtn(null)}
-              >
-                {st.text}
-              </button>
-            )
-          })}
-      </div>
+      {/* ── SECTION 4: FILE PREVIEW ─────────────────────── */}
+      {node.type === 'file' && <FilePreviewSection node={node} />}
 
-      {node.type === 'file' && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{
-            fontFamily: MONO, fontSize: 8,
-            color: 'rgba(110,110,158,0.5)',
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-            marginBottom: 6,
-          }}>Preview</div>
-
-          {preview.loading && (
-            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(110,110,158,0.4)', padding: '8px 0' }}>
-              loading…
-            </div>
-          )}
-
-          {preview.error && (
-            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(200,80,80,0.6)' }}>
-              {preview.error}
-            </div>
-          )}
-
-          {preview.lines && (
-            <>
-              <div style={{
-                background: 'rgba(0,0,0,0.35)',
-                border: '1px solid rgba(124,157,245,0.1)',
-                borderRadius: 6,
-                padding: '8px 10px',
-                maxHeight: 180,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-              }}>
-                {preview.lines.map((line, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, lineHeight: 1.55 }}>
-                    <span style={{
-                      fontFamily: MONO, fontSize: 9,
-                      color: 'rgba(110,110,158,0.3)',
-                      userSelect: 'none', flexShrink: 0,
-                      width: 24, textAlign: 'right', paddingTop: 1,
-                    }}>{i + 1}</span>
-                    <span style={{
-                      fontFamily: MONO, fontSize: 9.5,
-                      color: 'rgba(200,210,240,0.75)',
-                      whiteSpace: 'pre', overflow: 'hidden',
-                      textOverflow: 'ellipsis', display: 'block',
-                      maxWidth: 190,
-                    }}>{line || ' '}</span>
-                  </div>
-                ))}
-              </div>
-              {preview.truncated && (
-                <div style={{
-                  fontFamily: MONO, fontSize: 8,
-                  color: 'rgba(110,110,158,0.4)',
-                  marginTop: 4, textAlign: 'right',
-                }}>
-                  showing 60 of {preview.total} lines
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
+      {/* Git diff (retained — useful for nodes with git signals) */}
       {(activeSignals.includes('gitDirty') || activeSignals.includes('gitUnpushed')) && (
-        <div style={{ marginTop: 10 }}>
-          <div style={{
-            fontFamily: MONO, fontSize: 8,
-            color: 'rgba(110,110,158,0.5)',
-            letterSpacing: '0.08em', textTransform: 'uppercase',
-            marginBottom: 6,
-          }}>Git changes</div>
-
-          {gitDiff.loading && (
-            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(110,110,158,0.4)' }}>
-              loading…
-            </div>
-          )}
-
-          {gitDiff.summary && (
-            <div style={{
-              fontFamily: MONO, fontSize: 9,
-              color: 'rgba(200,200,230,0.6)',
-              marginBottom: 6, lineHeight: 1.5,
-            }}>{gitDiff.summary}</div>
-          )}
-
-          {gitDiff.diff && gitDiff.diff.length > 0 && (
-            <div style={{
-              background: 'rgba(0,0,0,0.35)',
-              border: '1px solid rgba(124,157,245,0.1)',
-              borderRadius: 6,
-              padding: '6px 10px',
-              maxHeight: 140,
-              overflowY: 'auto',
-            }}>
-              {gitDiff.diff.map((line, i) => {
-                const isAdd  = line.startsWith('+') && !line.startsWith('+++')
-                const isDel  = line.startsWith('-') && !line.startsWith('---')
-                const isHunk = line.startsWith('@@')
-                return (
-                  <div key={i} style={{
-                    fontFamily: MONO, fontSize: 8.5,
-                    lineHeight: 1.5,
-                    color: isAdd  ? 'rgba(78,205,196,0.8)'
-                         : isDel  ? 'rgba(255,107,107,0.7)'
-                         : isHunk ? 'rgba(124,157,245,0.6)'
-                         :          'rgba(160,160,200,0.45)',
-                    whiteSpace: 'pre', overflow: 'hidden',
-                    textOverflow: 'ellipsis', maxWidth: 210,
-                  }}>{line || ' '}</div>
-                )
-              })}
-            </div>
-          )}
-
-          {gitDiff.error && (
-            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(200,80,80,0.6)' }}>
-              {gitDiff.error}
-            </div>
-          )}
-        </div>
+        <GitDiffSection gitDiff={gitDiff} />
       )}
+
+      <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '16px 0 12px' }} />
+
+      {/* ── SECTION 5: ACTIONS ROW ──────────────────────── */}
+      <div>
+        <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+          Actions
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {actionBtns.map(({ key, icon, label, onClick }) => (
+            <button
+              key={key}
+              onClick={key === 'copy' ? handleCopyPath : onClick}
+              style={{
+                fontFamily: MONO, fontSize: 11,
+                padding: '5px 10px', borderRadius: 6,
+                background: hoverBtn === key ? 'rgba(78,205,196,0.12)' : 'rgba(78,205,196,0.05)',
+                border: `1px solid ${hoverBtn === key ? 'rgba(78,205,196,0.4)' : 'rgba(78,205,196,0.18)'}`,
+                color: key === 'copy' && copiedPath ? '#3dffa0' : hoverBtn === key ? '#4ecdc4' : 'rgba(120,120,175,0.8)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
+                transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+              }}
+              onMouseEnter={() => setHoverBtn(key)}
+              onMouseLeave={() => setHoverBtn(null)}
+            >
+              <span style={{ fontSize: 12 }}>{icon}</span>
+              <span>{key === 'copy' && copiedPath ? 'Copied!' : label}</span>
+            </button>
+          ))}
+          {OPEN_ACTIONS
+            .filter(({ foldersOnly }) => !foldersOnly || node.type === 'folder')
+            .map(({ action, label }) => {
+              const st  = openStatusLabel(openStatus[action], label)
+              const key = `open-${action}`
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleOpenApp(action)}
+                  style={{
+                    fontFamily: MONO, fontSize: 11,
+                    padding: '5px 10px', borderRadius: 6,
+                    background: hoverBtn === key ? 'rgba(124,157,245,0.12)' : 'rgba(124,157,245,0.05)',
+                    border: `1px solid ${hoverBtn === key ? 'rgba(124,157,245,0.4)' : 'rgba(124,157,245,0.18)'}`,
+                    color: hoverBtn === key ? '#e2e2f2' : st.color,
+                    cursor: 'pointer',
+                    transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+                  }}
+                  onMouseEnter={() => setHoverBtn(key)}
+                  onMouseLeave={() => setHoverBtn(null)}
+                >{st.text}</button>
+              )
+            })}
+        </div>
+      </div>
     </div>
   )
 }
