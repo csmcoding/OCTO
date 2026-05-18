@@ -704,3 +704,30 @@ shortcut `useEffect`. No logic changes — pure reorder.
 - Tests: 54 frontend + 29 backend passing. Build clean.
 - Next: PROMPT 25 — settings panel (auto-rotation toggle, label visibility,
   color theme, scan depth)
+
+---
+
+## PROMPT 25 HANDOFF — Settings Panel (commit 59327d8)
+- Status: COMPLETE
+- New: settings state object in ThreeScene — autoRotate, showLabels, sway,
+  scanDepth, colorTheme. setSetting helper (spreads prev + key/value).
+- New: SettingsPanel component — Toggle pill, Slider with range labels,
+  ThemeSelector with color swatch preview, reset-to-defaults button.
+  slideUp @keyframes in inline <style> tag. backdrop div closes on click.
+- New: ⚙ gear button at bottom:84 left:20 (above "?" at bottom:56, 28px gap)
+- New: S keyboard shortcut toggles settings. Esc priority chain: settings
+  first, then search, then panel (deselect). settingsOpen added to deps array.
+- Wired: autoRotate → CameraRig.useFrame guard (`if (autoRotate)`)
+- Wired: sway → Tentacle `sway` prop; `swayTentacle` only called when true
+- Wired: showLabels → SceneObjects prop → `showLabel={showLabels && hoveredId !== node.id}`
+- Wired: scanDepth → scanDepthRef (inline sync `scanDepthRef.current = settings.scanDepth`);
+  handleDrillIn reads ref — avoids cascading useCallback deps chain
+- Wired: colorTheme → SceneBackground component (useThree gl.setClearColor);
+  ambientLight intensity 0.5 (dark) vs 0.3 (deepspace); SceneObjects gets
+  colorTheme prop for ambient light control
+- New: SceneBackground component (inside Canvas) — reacts to colorTheme changes
+  via useEffect on gl; uses already-imported useThree
+- Tests: settings.test.js — 4 tests for settingsReducer logic. 58/58 passing.
+- Build clean. 29 backend tests pass.
+- Next: PROMPT 26 — export report (markdown snapshot of current view)
+  + share link (deep link to a node path)
