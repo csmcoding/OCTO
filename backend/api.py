@@ -2,6 +2,7 @@ import asyncio
 import concurrent.futures
 import json
 import os
+import shutil
 import subprocess
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
@@ -23,6 +24,24 @@ def _count_nodes(node: dict, count: int = 0) -> int:
     return count
 
 
+def _resolve_cmd(preferred: str) -> str:
+    candidates = {
+        "cursor": [
+            "/opt/cursor/cursor",
+            "/opt/Cursor/cursor",
+            os.path.expanduser("~/.local/bin/cursor"),
+            "/usr/bin/cursor",
+            "/usr/local/bin/cursor",
+        ],
+        "dolphin": ["/usr/bin/dolphin"],
+        "konsole": ["/usr/bin/konsole"],
+    }
+    for path in candidates.get(preferred, []):
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return shutil.which(preferred) or preferred
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     loop = asyncio.get_running_loop()
@@ -32,9 +51,7 @@ async def lifespan(app: FastAPI):
             lambda: build_multi_root_tree(max_depth=config.SHALLOW_DEPTH),
         )
     app.state.tree = tree
-    print(
-        f"[octopus] startup scan complete — {_count_nodes(tree)} nodes indexed"
-    )
+    print(f"[octo] startup scan complete — {_count_nodes(tree)} nodes indexed")
     yield
 
 
@@ -136,23 +153,27 @@ class OpenRequest(BaseModel):
     action: str
 
 
-_ACTION_MAP = {
-    "editor":   lambda path: [config.EDITOR, path],
-    "files":    lambda path: [config.FILE_MANAGER, path],
-    "terminal": lambda path: [config.TERMINAL, "--workdir", path],
-}
-
-
 @app.post("/open")
 def open_path(req: OpenRequest) -> dict:
-    builder = _ACTION_MAP.get(req.action)
-    if builder is None:
-        return {"ok": False, "error": f"Unknown action: {req.action}"}
+    action_map = {
+        "editor":   lambda p: [_resolve_cmd(config.EDITOR), p],
+        "files":    lambda p: [_resolve_cmd(config.FILE_MANAGER), p],
+        "terminal": lambda p: [_resolve_cmd(config.TERMINAL), "--workdir", p],
+    }
+    if req.action not in action_map:
+        return {"ok": False, "error": f"unknown action: {req.action}"}
+
+    cmd = action_map[req.action](req.path)
     try:
-        subprocess.Popen(builder(req.path))
+        subprocess.Popen(
+            cmd,
+            env=os.environ.copy(),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
         return {"ok": True, "action": req.action, "path": req.path}
     except Exception as e:
-        return {"ok": False, "error": str(e)}
+        return {"ok": False, "error": str(e), "cmd": cmd}
 
 
 @app.get("/settings")

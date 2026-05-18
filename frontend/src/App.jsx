@@ -30,12 +30,20 @@ export default function App() {
   )
   if (!backendReady) return (
     <div style={{
+      width: '100vw', height: '100vh', overflow: 'hidden',
+      background: '#050508', margin: 0, padding: 0,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      height: '100vh', background: '#0a0a0f',
       color: '#4A90D9', fontFamily: 'monospace', fontSize: 14,
     }}>
       connecting to backend...
     </div>
   )
-  return <Dashboard />
+  return (
+    <div style={{
+      width: '100vw', height: '100vh', overflow: 'hidden',
+      background: '#050508', margin: 0, padding: 0,
+    }}>
+      <Dashboard />
+    </div>
+  )
 }

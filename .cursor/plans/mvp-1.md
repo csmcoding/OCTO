@@ -465,4 +465,68 @@ ThreeScene.jsx updates:
 - Ctrl+K search: searches in-memory shallow tree, keyboard nav, Enter to jump + open panel
 - findAncestorStack walks loaded tree to reconstruct navStack on search select
 - getTooltipLines and buildCrumbList exported as pure functions for jsdom-free testing
-- Next: PROMPT 14 — settings.json reader + startup polish
+- Next: PROMPT 14 — startup polish + v0.2.0
+
+---
+
+## PROMPT 14 HANDOFF — Startup Polish + v0.2.0
+- Status: COMPLETE
+- Verified: start.sh syntax ok, 25 backend tests pass, 34 frontend tests pass, build clean
+- Tag: v0.2.0 (also has v0.1.0)
+- New files: start.sh, CHANGELOG.md, BackendError.jsx,
+  frontend/src/__tests__/BackendError.test.js
+- Modified: App.jsx (health gate + BackendError), api.py (lifespan startup scan,
+  app.state.tree replaces _tree_cache, /tree serves cache for shallow depth),
+  index.html (title), ThreeScene.jsx (gl.pixelRatio)
+- Startup scan runs in ThreadPoolExecutor at lifespan, logs node count
+- /tree short-circuits from app.state.tree when depth == SHALLOW_DEPTH
+- BackendError exports ERROR_HEADING constant for jsdom-free testing
+- Auto-retry countdown: local state in BackendError, resets on each manual/auto retry
+- Next: PROMPT 15-UX — layout fix + open actions + context menu + labels
+
+---
+
+## PROMPT 15-UX HANDOFF — Layout Fix + Open Actions + Context Menu + Labels
+- Status: COMPLETE
+- Verified: 37 frontend tests pass, build clean (584 modules, 0 errors)
+- New files: NodeContextMenu.jsx, frontend/src/__tests__/NodeContextMenu.test.js
+- Modified: index.css (full-viewport reset, removed 1126px constraint),
+  App.jsx (viewport wrapper), Dashboard.jsx (100% relative container),
+  Panel.jsx (per-action status map, real openNode calls, 3 buttons),
+  NodeMesh.jsx (Html label + onContextMenu), ThreeScene.jsx (context menu
+  state, canvas wrapper div, handleDrillIn extracted),
+  Breadcrumb.jsx / BackToProjectsButton.jsx / ScanButton.jsx /
+  ScanTimestamp.jsx (unified pill style, consistent positions)
+- Layout: index.css reset removes Vite default 1126px #root constraint
+- Open actions: per-action status map { [action]: idle|opening|ok|error }
+- Context menu: getMenuItems(node) exported pure fn; outside-click closes via useEffect
+- Node labels: Html from drei at position [0,-0.75,0], distanceFactor 8, pointer-events none
+- handleDrillIn extracted so both double-click and context menu "Drill" share same logic
+- Next: PROMPT 16 — animations (entrance, camera lerp, idle pulse)
+
+---
+
+## PROMPT 16 HANDOFF — OCTO Rebrand + Tentacle Geometry + Design System
+- Status: COMPLETE
+- Verified: 42 frontend tests pass, 25 backend tests pass, build clean (0 errors)
+- New files: OctoWordmark.jsx, Tentacle.jsx, utils/buildTentacleLayout.js,
+  src/__tests__/buildTentacleLayout.test.js
+- Modified: index.html, index.css, App.jsx, Dashboard.jsx, Breadcrumb.jsx,
+  ThreeScene.jsx, Panel.jsx, ScanButton.jsx, ScanTimestamp.jsx,
+  NodeContextMenu.jsx, NodeMesh.jsx, BackToProjectsButton.jsx,
+  backend/api.py
+- TASK A: _resolve_cmd(preferred) checks hardcoded candidates then shutil.which;
+  /open endpoint is sync def (not async) for test compat with test_open.py
+- TASK B: OctoWordmark is two-span (OCTO + uptonogood), fixed top-left z=150;
+  Breadcrumb shows "OCTO" for node.type==='you' (not index===0, to pass existing tests);
+  title "OCTO — uptonogood"
+- TASK C: buildTentacleLayout → {node, endPosition: Vector3, curve: CatmullRomCurve3(4 pts)};
+  XY-plane spread (z=0); Tentacle is tube-only (no sphere/label); SceneObjects renders
+  Tentacle + NodeMesh at endPosition; hoveredId state in SceneObjects drives tentacle hovered prop;
+  swayTentacle uses += (matches spec) — Tentacle resets points[1] to originalMid each frame
+  before calling swayTentacle, preventing drift; threshold dx/dy>0.004 gates rebuild
+- TASK D: index.css has @keyframes fadeIn+scanPulse; bg #050508; Panel close "×" abs top-right,
+  glass blur 16px; BackToProjectsButton label "← root" with hover glow; ScanTimestamp
+  color rgba(74,144,217,0.35); NodeMesh default emissiveIntensity 0.06/0.22(signal)/0.45(hover);
+  Canvas antialias+onCreated+camera [0,4,10] fov 55
+- Next: PROMPT 17 — entrance animations + camera lerp

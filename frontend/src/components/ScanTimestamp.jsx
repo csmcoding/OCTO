@@ -22,16 +22,17 @@ export default function ScanTimestamp({ scannedAt }) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: 8,
-      left: 24,
-      color: '#ffffff',
-      opacity: 0.4,
-      fontFamily: 'monospace',
-      fontSize: 11,
+      bottom: 20,
+      left: 20,
+      color: 'rgba(74,144,217,0.35)',
+      fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+      fontSize: 10,
       zIndex: 50,
       pointerEvents: 'none',
+      letterSpacing: '0.05em',
+      userSelect: 'none',
     }}>
-      Last scanned: {label}
+      last scan: {label}
     </div>
   )
 }
