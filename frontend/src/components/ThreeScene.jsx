@@ -35,8 +35,31 @@ function CameraRig({ hoveredPosition }) {
       const delta = e.deltaY > 0 ? 1.08 : 0.93
       zoomRef.current = Math.min(3.5, Math.max(0.45, zoomRef.current * delta))
     }
+
+    let lastPinchDist = null
+    const onTouchMove = (e) => {
+      if (e.touches.length !== 2) return
+      e.preventDefault()
+      const dx = e.touches[0].clientX - e.touches[1].clientX
+      const dy = e.touches[0].clientY - e.touches[1].clientY
+      const dist = Math.hypot(dx, dy)
+      if (lastPinchDist !== null) {
+        const ratio = dist / lastPinchDist
+        const delta = ratio > 1 ? 0.95 : 1.05
+        zoomRef.current = Math.min(3.5, Math.max(0.45, zoomRef.current * delta))
+      }
+      lastPinchDist = dist
+    }
+    const onTouchEnd = () => { lastPinchDist = null }
+
     window.addEventListener('wheel', onWheel, { passive: false })
-    return () => window.removeEventListener('wheel', onWheel)
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onTouchEnd)
+    return () => {
+      window.removeEventListener('wheel', onWheel)
+      window.removeEventListener('touchmove', onTouchMove)
+      window.removeEventListener('touchend', onTouchEnd)
+    }
   }, [])
 
   useFrame((_, delta) => {
