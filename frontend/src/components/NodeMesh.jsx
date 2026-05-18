@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text, Html } from '@react-three/drei'
 import { getActiveSignals } from '../utils/signals'
@@ -16,7 +16,7 @@ function PulsingLight({ color }) {
   return <pointLight ref={lightRef} color={color} distance={2} />
 }
 
-export default function NodeMesh({
+function NodeMesh({
   node, position,
   onClick, onDoubleClick, onContextMenu,
   onPointerEnter, onPointerMove, onPointerLeave,
@@ -111,3 +111,5 @@ export default function NodeMesh({
     </group>
   )
 }
+
+export default React.memo(NodeMesh)

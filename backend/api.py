@@ -264,6 +264,48 @@ async def git_diff_summary(path: str):
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+@app.get("/scan-info")
+async def scan_info(path: str):
+    from backend.config import SKIP_DIRS, MAX_CHILDREN
+    p = Path(path)
+    if not p.is_dir():
+        return JSONResponse({"error": "not a dir"}, status_code=400)
+    try:
+        names = [e.name for e in p.iterdir()]
+        total = len(names)
+        skipped = sum(1 for n in names if n in SKIP_DIRS or n.startswith("."))
+        visible = total - skipped
+        return {
+            "total": total,
+            "skipped": skipped,
+            "visible": visible,
+            "capped": visible > MAX_CHILDREN,
+        }
+    except PermissionError:
+        return JSONResponse({"error": "permission denied"}, status_code=403)
+
+
+@app.get("/node")
+async def get_node(path: str):
+    from backend.signals import compute_signals
+    p = Path(path)
+    if not p.exists():
+        return JSONResponse({"error": "not found"}, status_code=404)
+    node_type = "folder" if p.is_dir() else "file"
+    try:
+        signals = compute_signals(str(p), node_type)
+    except Exception:
+        signals = {}
+    stat = p.stat()
+    return {
+        "name": p.name,
+        "path": str(p),
+        "type": node_type,
+        "size": stat.st_size if not p.is_dir() else None,
+        "signals": signals,
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.api:app", host="0.0.0.0", port=config.API_PORT)
