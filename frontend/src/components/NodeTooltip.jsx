@@ -23,14 +23,14 @@ export default function NodeTooltip({ node, position }) {
       position: 'fixed',
       left: position.x + 14,
       top: position.y - 10,
-      background: 'rgba(10, 10, 30, 0.92)',
-      border: '1px solid rgba(74, 144, 217, 0.4)',
+      background: 'rgba(6, 6, 16, 0.94)',
+      border: '1px solid rgba(124,157,245,0.3)',
       borderRadius: 6,
       padding: '6px 10px',
       pointerEvents: 'none',
       zIndex: 300,
     }}>
-      <div style={{ color: '#ffffff', fontSize: 13, fontFamily: 'monospace', fontWeight: 500 }}>
+      <div style={{ color: '#e2e2f2', fontSize: 13, fontFamily: 'monospace', fontWeight: 500 }}>
         {lines.name}
       </div>
       {lines.signalLabel && (
@@ -38,7 +38,7 @@ export default function NodeTooltip({ node, position }) {
           {lines.signalLabel}
         </div>
       )}
-      <div style={{ color: '#666688', fontSize: 10, fontFamily: 'monospace' }}>
+      <div style={{ color: '#6e6e9e', fontSize: 10, fontFamily: 'monospace' }}>
         {lines.typeLabel}
       </div>
     </div>

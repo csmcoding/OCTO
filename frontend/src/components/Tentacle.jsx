@@ -1,48 +1,87 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { TubeGeometry } from 'three'
+import { TubeGeometry, CatmullRomCurve3 } from 'three'
 import { swayTentacle } from '../utils/buildTentacleLayout'
 
-export default function Tentacle({ curve, index, color = '#4A90D9', hovered = false }) {
+export default function Tentacle({
+  curve, basePoints, index,
+  color = '#4ecdc4', hovered = false,
+  revealProgress = 1, delay = 0,
+}) {
   const meshRef = useRef()
-  const curveRef = useRef(curve)
-  const originalMid = useRef(curve.points[1].clone())
-  const lastSway = useRef({ x: curve.points[1].x, y: curve.points[1].y })
+  const frame = useRef(0)
+  const revealStartRef = useRef(null)
 
-  const tubeGeo = useMemo(
-    () => new TubeGeometry(curveRef.current, 20, 0.028, 6, false),
+  const initGeo = useMemo(
+    () => new TubeGeometry(curve, 24, 0.022, 6, false),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
 
+  useEffect(() => () => meshRef.current?.geometry?.dispose(), [])
+
   useFrame(({ clock }) => {
     if (!meshRef.current) return
+    frame.current++
 
-    // Reset to original before sway to prevent drift
-    curveRef.current.points[1].copy(originalMid.current)
-    swayTentacle(curveRef.current, index, clock.getElapsedTime())
+    const now = clock.getElapsedTime()
 
-    const p1 = curveRef.current.points[1]
-    const dx = Math.abs(p1.x - lastSway.current.x)
-    const dy = Math.abs(p1.y - lastSway.current.y)
-    if (dx > 0.004 || dy > 0.004) {
-      meshRef.current.geometry.dispose()
-      meshRef.current.geometry = new TubeGeometry(
-        curveRef.current, 20, hovered ? 0.038 : 0.024, 6, false,
-      )
-      lastSway.current = { x: p1.x, y: p1.y }
+    if (revealProgress <= 0) {
+      revealStartRef.current = null
+      meshRef.current.visible = false
+      return
     }
+
+    if (revealStartRef.current === null) {
+      revealStartRef.current = now
+    }
+    meshRef.current.visible = true
+
+    swayTentacle(curve, basePoints, index, now)
+
+    if (frame.current % 3 !== 0) return
+
+    let tubeCurve = curve
+    let tubeSeg = 24
+
+    if (revealProgress < 1) {
+      const elapsed = now - revealStartRef.current
+      const staggered = Math.max(0, elapsed - delay)
+      const localP = Math.min(staggered / 1.2, revealProgress)
+
+      if (localP < 0.02) {
+        meshRef.current.visible = false
+        return
+      }
+
+      if (localP < 0.99) {
+        const n = Math.max(3, Math.ceil(16 * localP))
+        const pts = []
+        for (let j = 0; j <= n; j++) {
+          pts.push(curve.getPoint((j / n) * localP))
+        }
+        tubeCurve = new CatmullRomCurve3(pts)
+        tubeSeg = n
+      }
+    }
+
+    const old = meshRef.current.geometry
+    meshRef.current.geometry = new TubeGeometry(
+      tubeCurve, tubeSeg, hovered ? 0.042 : 0.022, 6, false,
+    )
+    old?.dispose()
   })
 
   return (
-    <mesh ref={meshRef} geometry={tubeGeo}>
+    <mesh ref={meshRef} geometry={initGeo}>
       <meshStandardMaterial
-        color={color}
+        color="#030308"
         emissive={color}
-        emissiveIntensity={hovered ? 0.6 : 0.15}
+        emissiveIntensity={hovered ? 0.7 : 0.2}
         transparent
-        opacity={hovered ? 0.9 : 0.55}
-        roughness={0.4}
-        metalness={0.3}
+        opacity={hovered ? 0.9 : 0.5}
+        roughness={0.35}
+        metalness={0.4}
       />
     </mesh>
   )

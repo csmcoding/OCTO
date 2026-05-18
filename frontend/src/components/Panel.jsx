@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { openNode } from '../utils/loadTree'
 import { getActiveSignals, SIGNAL_COLORS, SIGNAL_LABELS } from '../utils/signals'
+import { getNodeColor } from '../utils/palette'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 
@@ -11,8 +12,8 @@ const ACTIONS = [
 ]
 
 function statusLabel(status, defaultLabel) {
-  if (!status || status === 'idle') return { text: defaultLabel, color: '#6a9fd8' }
-  if (status === 'opening') return { text: 'opening...', color: '#888888' }
+  if (!status || status === 'idle') return { text: defaultLabel, color: '#7c9df5' }
+  if (status === 'opening') return { text: 'opening...', color: '#6e6e9e' }
   if (status === 'ok')      return { text: '✓ opened',   color: '#3dffa0' }
   return                           { text: '✗ failed',   color: '#ff4466' }
 }
@@ -20,6 +21,8 @@ function statusLabel(status, defaultLabel) {
 export default function Panel({ node, onClose }) {
   const [openStatus, setOpenStatus] = useState({})
   const [hoverBtn, setHoverBtn] = useState(null)
+
+  const nodeColor = getNodeColor(node)
 
   const displayPath = node.path.length > 55
     ? '...' + node.path.slice(-55)
@@ -50,17 +53,17 @@ export default function Panel({ node, onClose }) {
       bottom: 52,
       left: 20,
       width: 256,
-      background: 'rgba(5, 5, 15, 0.95)',
-      border: '1px solid rgba(74, 144, 217, 0.22)',
+      background: 'rgba(6, 6, 16, 0.95)',
+      border: '1px solid rgba(124,157,245,0.18)',
+      borderLeft: `2px solid ${nodeColor}`,
       borderRadius: 10,
       backdropFilter: 'blur(16px)',
-      boxShadow: '0 0 0 1px rgba(74,144,217,0.06), 0 12px 40px rgba(0,0,0,0.75)',
-      padding: '16px 18px',
+      boxShadow: `0 0 0 1px rgba(124,157,245,0.05), 0 12px 40px rgba(0,0,0,0.75), 0 0 20px ${nodeColor}18`,
+      padding: '16px 18px 16px 16px',
       fontFamily: MONO,
       zIndex: 100,
       animation: 'fadeIn 0.2s ease',
     }}>
-      {/* Close button */}
       <button
         onClick={onClose}
         style={{
@@ -69,7 +72,7 @@ export default function Panel({ node, onClose }) {
           right: 12,
           background: 'none',
           border: 'none',
-          color: '#2e2e5a',
+          color: '#3a3a5e',
           fontSize: 15,
           cursor: 'pointer',
           padding: '0 2px',
@@ -77,20 +80,20 @@ export default function Panel({ node, onClose }) {
           fontFamily: MONO,
           transition: 'color 0.12s',
         }}
-        onMouseEnter={e => e.target.style.color = '#e8e8f8'}
-        onMouseLeave={e => e.target.style.color = '#2e2e5a'}
+        onMouseEnter={e => e.target.style.color = '#e2e2f2'}
+        onMouseLeave={e => e.target.style.color = '#3a3a5e'}
       >
         ×
       </button>
 
-      <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f8', letterSpacing: '0.02em', marginBottom: 3, paddingRight: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: nodeColor, letterSpacing: '0.02em', marginBottom: 3, paddingRight: 20 }}>
         {node.name}
       </div>
-      <div style={{ fontSize: 9, color: '#2e2e5a', marginBottom: 11, wordBreak: 'break-all' }}>
+      <div style={{ fontSize: 9, color: '#3a3a5e', marginBottom: 11, wordBreak: 'break-all' }}>
         {displayPath}
       </div>
 
-      <div style={{ height: 1, background: 'rgba(74,144,217,0.1)', margin: '0 0 10px' }} />
+      <div style={{ height: 1, background: `${nodeColor}20`, margin: '0 0 10px' }} />
 
       <div style={{ marginBottom: 11 }}>
         {activeSignals.length === 0 ? (
@@ -124,9 +127,9 @@ export default function Panel({ node, onClose }) {
                   fontSize: 10,
                   padding: '4px 9px',
                   borderRadius: 4,
-                  background: isHov ? 'rgba(74,144,217,0.16)' : 'rgba(74,144,217,0.08)',
-                  border: `1px solid ${isHov ? 'rgba(74,144,217,0.45)' : 'rgba(74,144,217,0.2)'}`,
-                  color: isHov ? '#e8e8f8' : st.color,
+                  background: isHov ? 'rgba(124,157,245,0.14)' : 'rgba(124,157,245,0.06)',
+                  border: `1px solid ${isHov ? 'rgba(124,157,245,0.4)' : 'rgba(124,157,245,0.18)'}`,
+                  color: isHov ? '#e2e2f2' : st.color,
                   letterSpacing: '0.03em',
                   cursor: 'pointer',
                   transition: 'all 0.12s ease',
