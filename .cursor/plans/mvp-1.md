@@ -633,3 +633,21 @@ ThreeScene.jsx updates:
   Tentacle grow-from-center with stagger delay=i*0.045. Confirmed working.
 - Tests: keyboard.test.js — 3 pure logic tests for Esc priority, Backspace with/without parent
 - Next: PROMPT 22 — signal detail drawer + node search upgrade
+
+---
+
+## PROMPT 21-HOTFIX — Black screen fix (commit 5e6195e)
+
+**Root cause:** React hooks ordering violation / temporal dead zone crash.
+`useEffect` on line 342 included `handleNodeDoubleClick` in its dependency array,
+but `handleNodeDoubleClick` was defined with `useCallback` at line 402 (after the
+`useEffect` call). JavaScript `const` is in the TDZ until its binding statement
+executes — evaluating the deps array `[..., handleNodeDoubleClick]` before line 402
+throws `ReferenceError: Cannot access 'handleNodeDoubleClick' before initialization`,
+crashing the component on every first render.
+
+**Fix:** Moved `revealKey` state, `handleDrillIn`, `handleNodeClick`,
+`handleNodeDoubleClick`, and `handleSearchSelect` to before the keyboard
+shortcut `useEffect`. No logic changes — pure reorder.
+
+- Verified: 47 frontend tests pass, build clean, scene renders again
