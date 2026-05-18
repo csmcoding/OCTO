@@ -47,15 +47,15 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
       top: 16,
       left: '50%',
       transform: 'translateX(-50%)',
-      background: 'rgba(8, 8, 24, 0.88)',
-      border: '1px solid rgba(74, 144, 217, 0.25)',
+      background: 'rgba(6, 6, 16, 0.88)',
+      border: '1px solid var(--accent-dim)',
       backdropFilter: 'blur(4px)',
       borderRadius: 20,
       padding: '6px 16px',
       fontFamily: MONO,
       fontSize: 12,
       letterSpacing: '0.02em',
-      color: '#6666aa',
+      color: '#6e6e9e',
       zIndex: 200,
       whiteSpace: 'nowrap',
       userSelect: 'none',
@@ -63,16 +63,16 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
       {crumbs.map((crumb, i) => (
         <span key={crumb.key}>
           {i > 0 && (
-            <span style={{ color: '#334455', userSelect: 'none' }}>{SEP}</span>
+            <span style={{ color: '#3a3a5e', userSelect: 'none' }}>{SEP}</span>
           )}
           {crumb.clickable ? (
             <span
               style={{
-                color: '#4A90D9',
+                color: '#7c9df5',
                 cursor: 'pointer',
                 padding: '2px 4px',
                 borderRadius: 3,
-                background: hoveredVisualIdx === i ? 'rgba(74,144,217,0.15)' : 'transparent',
+                background: hoveredVisualIdx === i ? 'rgba(124,157,245,0.12)' : 'transparent',
                 transition: 'background 0.15s',
               }}
               onMouseEnter={() => setHoveredVisualIdx(i)}
@@ -83,7 +83,7 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
             </span>
           ) : (
             <span style={{
-              color: crumb.label === '...' ? '#334455' : '#e0e0f0',
+              color: crumb.label === '...' ? '#3a3a5e' : '#e2e2f2',
               fontWeight: crumb.label === '...' ? 400 : 600,
               padding: '2px 4px',
             }}>

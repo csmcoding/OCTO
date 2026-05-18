@@ -5,8 +5,8 @@ const BASE = {
   position: 'fixed',
   bottom: 20,
   right: 20,
-  background: 'rgba(8, 8, 24, 0.88)',
-  border: '1px solid rgba(74, 144, 217, 0.25)',
+  background: 'rgba(6, 6, 16, 0.88)',
+  border: '1px solid rgba(124,157,245,0.22)',
   borderRadius: 20,
   padding: '6px 14px',
   fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
@@ -39,22 +39,22 @@ export default function ScanButton({ onScanComplete }) {
   }
 
   if (status === 'scanning') return (
-    <div style={{ ...BASE, color: '#4A90D9', cursor: 'default', animation: 'scanPulse 1.5s ease-in-out infinite' }}>
+    <div style={{ ...BASE, color: '#7c9df5', cursor: 'default', animation: 'scanPulse 1.5s ease-in-out infinite' }}>
       scanning… {count} dirs
     </div>
   )
   if (status === 'done') return (
-    <div style={{ ...BASE, color: '#44ff88', borderColor: 'rgba(68,255,136,0.25)', cursor: 'default' }}>
+    <div style={{ ...BASE, color: '#3dffa0', borderColor: 'rgba(61,255,160,0.22)', cursor: 'default' }}>
       ✓ {total} dirs
     </div>
   )
   if (status === 'error') return (
-    <div style={{ ...BASE, color: '#ff4444', borderColor: 'rgba(255,68,68,0.25)', cursor: 'default' }}>
+    <div style={{ ...BASE, color: '#ff4466', borderColor: 'rgba(255,68,102,0.22)', cursor: 'default' }}>
       ✗ scan failed
     </div>
   )
   return (
-    <button style={{ ...BASE, color: '#4A90D9', cursor: 'pointer' }} onClick={handleClick}>
+    <button style={{ ...BASE, color: '#7c9df5', cursor: 'pointer' }} onClick={handleClick}>
       ⟳ Rescan
     </button>
   )

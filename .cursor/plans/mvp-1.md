@@ -529,4 +529,63 @@ ThreeScene.jsx updates:
   glass blur 16px; BackToProjectsButton label "← root" with hover glow; ScanTimestamp
   color rgba(74,144,217,0.35); NodeMesh default emissiveIntensity 0.06/0.22(signal)/0.45(hover);
   Canvas antialias+onCreated+camera [0,4,10] fov 55
-- Next: PROMPT 17 — entrance animations + camera lerp
+- Next: PROMPT 17 — spherical layout + camera rig
+
+---
+
+## PROMPT 17 HANDOFF — Spherical Layout + Camera Rig + Sway Fix
+- Status: COMPLETE
+- Verified: 44 frontend tests pass, 25 backend tests pass, build clean (586 modules)
+- Root cause fixed: XY-plane flat layout → Fibonacci sphere distribution (golden angle spacing)
+- Sway drift fixed: swayTentacle resets via .copy(basePoints[i]) before adding offset; safe every frame
+- Click targets fixed: NodeMesh now uses sphereGeometry args=[0.38, 32, 32] for all nodes;
+  signal nodes scale 1.1; label at [0, -0.55, 0]; torus removed
+- Camera: CameraRig auto-rotates (delta * 0.08 rad/s), spring-lerps to target (exp decay k=2.5),
+  nudges toward hovered node endPosition (0.08 pull factor); no OrbitControls
+- Lights: center pointLight [0,0,0] intensity 2.0 distance 12 creates depth falloff;
+  top fill [0,8,0] white; rim [-6,-4,-8] dark purple
+- Layout: buildTentacleLayout returns {node, endPosition, curve, basePoints}; pole guard
+  for perpRaw.lengthSq() < 1e-6; layout memoized in SceneObjects on [currentRoot]
+- Tentacle: takes basePoints prop, passes to swayTentacle; tube-only, no sphere/label
+- ThreeScene: hoveredEndPos state → CameraRig; onHoverPosition → SceneObjects → setHoveredEndPos
+- Next: PROMPT 18 — entrance animation + drill-in transition
+---
+
+## PROMPT 18 HANDOFF — Entrance Animations + Drill Transitions + Idle Pulse
+- Status: COMPLETE
+- Verified: 44 frontend tests pass, 25 backend tests pass, build clean (0 errors)
+- useAnimationClock.js: new useRevealProgress(revealKey, duration) hook — rAF loop,
+  ease-out-cubic (1 - (1-p)^3), restarts on revealKey change, jumps to 1 for prefers-reduced-motion
+- Tentacle entrance: sub-curve sampling via curve.getPoint((j/n) * localP) draws first
+  localP fraction; staggered per node (delay = i * 0.045); revealStartRef tracks clock
+  start time; geometry rebuilt every 3 frames, old disposed; hidden until localP >= 0.02
+- NodeMesh fade-in: nodeProgress = clamp((revealProgress*1.2 - delay) / 0.4, 0, 1);
+  opacity=nodeProgress, transparent when <1; synced to tentacle reveal
+- Center node idle breathe: centerRef + useFrame, scale = 1 + sin(t * 2π/3.5) * 0.03
+- Drill trigger: revealKey state in ThreeScene, incremented via useEffect on currentRoot
+  change; passed as ringKey to SceneObjects → useRevealProgress resets → animation restarts
+- CSS: fadeIn updated to translateY(6px); added nodeReveal (scale 0.7→1) and breathe keyframes
+- Next: PROMPT 19 — node search, keyboard nav, or further scene polish
+
+---
+
+## PROMPT 19 HANDOFF — Bioluminescence Palette + Semantic Colors + Responsive Camera
+- Status: COMPLETE
+- Verified: 44 frontend tests pass, 25 backend tests pass, build clean (0 errors, 588 modules)
+- New: frontend/src/utils/palette.js — single source of truth; PALETTE constants + getNodeColor(node)
+- Semantic colors: folder=#c8a2ff (violet), file=#4ecdc4 (teal), signal=#ff6b6b (coral), selected=#f9e94e (gold)
+- NodeMesh: uses getNodeColor(); isSelected prop turns node gold; emissiveIntensity 0.35/0.4/0.8;
+  label font upgraded to Outfit 11px 500 weight with color glow text-shadow
+- Tentacle: material color '#030308' dark base, emissive=nodeColor from SceneObjects,
+  emissiveIntensity 0.2/0.7 (idle/hover), opacity 0.5/0.9
+- ThreeScene: responsive radius via useThree().viewport.aspect × nodeCount formula (4.5–7.5);
+  CameraRig pulls back to r=13 on viewports <900px wide; Canvas gl.setClearColor('#03030a'),
+  setPixelRatio(min(dpr,2)), alpha:false, fov:52, resize:{debounce:50}
+- Lights: ambientLight 0.5 #08083a; center white pointLight 3.0; top blue #7c9df5 0.6;
+  bottom violet #c8a2ff 0.4 — three-color lighting gives surface depth variation
+- OctoWordmark: 8-arm SVG glyph (16×16 radial lines + center circle) + full subtitle
+  "Organizational Code Topology Observer" with truncation on narrow viewports
+- Panel: borderLeft=2px solid nodeColor; title text=nodeColor; glow box-shadow
+- All components: #4A90D9/rgba(74,144,217,...) → #7c9df5/rgba(124,157,245,...) throughout
+- CSS: full reset with :root custom properties, Outfit @import, selection/scrollbar tokens
+- Next: PROMPT 20 — entrance animations search overlay, or further feature work

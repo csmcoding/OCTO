@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Text, Html } from '@react-three/drei'
-import { getActiveSignals, getDominantColor } from '../utils/signals'
+import { getActiveSignals } from '../utils/signals'
+import { PALETTE, getNodeColor } from '../utils/palette'
 
 function PulsingLight({ color }) {
   const lightRef = useRef()
@@ -19,19 +20,24 @@ export default function NodeMesh({
   node, position,
   onClick, onDoubleClick, onContextMenu,
   onPointerEnter, onPointerMove, onPointerLeave,
+  revealProgress = 1, delay = 0,
+  isSelected = false,
 }) {
   const [isHovered, setIsHovered] = useState(false)
-  const isFolder = node.type === 'folder'
-  const dominantColor = getDominantColor(node)
   const activeSignals = getActiveSignals(node)
   const hasSignal = activeSignals.length > 0
 
-  const emissiveColor = dominantColor ?? '#4A90D9'
-  const emissiveIntensity = isHovered ? 0.45 : hasSignal ? 0.22 : 0.06
+  const nodeColor = isSelected ? PALETTE.selected : getNodeColor(node)
+  const emissiveIntensity = isHovered ? 0.8 : hasSignal ? 0.4 : 0.35
+
+  const nodeProgress = revealProgress >= 1
+    ? 1
+    : Math.max(0, Math.min((revealProgress * 1.2 - delay) / 0.4, 1))
 
   return (
     <group position={position}>
       <mesh
+        scale={hasSignal ? 1.1 : 1}
         onClick={(e) => { e.stopPropagation(); onClick?.(node) }}
         onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(node) }}
         onContextMenu={(e) => { e.stopPropagation(); onContextMenu?.(node, e) }}
@@ -47,52 +53,51 @@ export default function NodeMesh({
           onPointerLeave?.(node, e)
         }}
       >
-        {isFolder
-          ? <torusGeometry args={[0.35, 0.08, 16, 60]} />
-          : <sphereGeometry args={[0.1, 12, 12]} />
-        }
+        <sphereGeometry args={[0.38, 32, 32]} />
         <meshStandardMaterial
-          color="#0e0e28"
-          emissive={emissiveColor}
+          color="#0a0a1a"
+          emissive={nodeColor}
           emissiveIntensity={emissiveIntensity}
-          roughness={0.5}
-          metalness={0.4}
+          transparent={nodeProgress < 1}
+          opacity={nodeProgress}
+          roughness={0.4}
+          metalness={0.5}
         />
       </mesh>
 
-      {hasSignal && <PulsingLight color={dominantColor} />}
+      {hasSignal && <PulsingLight color={nodeColor} />}
       {hasSignal && (
-        <Text position={[0, 0.6, 0]} fontSize={0.25} color={dominantColor} depthOffset={-1}>
+        <Text position={[0, 0.6, 0]} fontSize={0.25} color={nodeColor} depthOffset={-1}>
           !
         </Text>
       )}
       {node.hasChildren && node.children.length === 0 && (
         <mesh>
           <torusGeometry args={[0.55, 0.02, 8, 40]} />
-          <meshBasicMaterial color="#ffffff" opacity={0.3} transparent />
+          <meshBasicMaterial color={nodeColor} opacity={0.3} transparent />
         </mesh>
       )}
 
       <Html
-        position={[0, -0.75, 0]}
+        position={[0, -0.62, 0]}
         center
         distanceFactor={8}
         occlude={false}
         style={{ pointerEvents: 'none' }}
       >
         <div style={{
-          color: dominantColor
-            ? `${dominantColor}bf`
-            : 'rgba(200,200,230,0.55)',
-          fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
-          fontSize: '9px',
+          color: nodeColor + 'e6',
+          fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
+          fontSize: '11px',
+          fontWeight: 500,
           whiteSpace: 'nowrap',
           textAlign: 'center',
-          textShadow: '0 1px 6px rgba(0,0,0,1)',
+          textShadow: `0 0 8px ${nodeColor}`,
           userSelect: 'none',
-          maxWidth: '70px',
+          maxWidth: '80px',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
+          letterSpacing: '0.01em',
         }}>
           {node.name}
         </div>

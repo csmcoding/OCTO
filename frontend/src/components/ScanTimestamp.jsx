@@ -24,7 +24,7 @@ export default function ScanTimestamp({ scannedAt }) {
       position: 'fixed',
       bottom: 20,
       left: 20,
-      color: 'rgba(74,144,217,0.35)',
+      color: 'var(--text-faint, #3a3a5e)',
       fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
       fontSize: 10,
       zIndex: 50,

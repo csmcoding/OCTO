@@ -28,8 +28,8 @@ function MenuItem({ label, onClick }) {
         padding: '7px 14px',
         fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
         fontSize: 12,
-        color: hovered ? '#ffffff' : '#cccce0',
-        background: hovered ? 'rgba(74,144,217,0.15)' : 'transparent',
+        color: hovered ? '#e2e2f2' : '#b0b0cc',
+        background: hovered ? 'rgba(124,157,245,0.12)' : 'transparent',
         cursor: 'pointer',
         userSelect: 'none',
       }}
@@ -73,8 +73,8 @@ export default function NodeContextMenu({ node, position, onClose, onDrillIn }) 
         position: 'fixed',
         left: position.x,
         top: position.y,
-        background: 'rgba(5, 5, 18, 0.97)',
-        border: '1px solid rgba(74, 144, 217, 0.3)',
+        background: 'rgba(6, 6, 16, 0.97)',
+        border: '1px solid rgba(124,157,245,0.25)',
         backdropFilter: 'blur(8px)',
         borderRadius: 6,
         padding: '4px 0',
@@ -86,7 +86,7 @@ export default function NodeContextMenu({ node, position, onClose, onDrillIn }) 
     >
       {getMenuItems(node).map((item, i) =>
         item.isDivider ? (
-          <div key={i} style={{ height: 1, background: 'rgba(74,144,217,0.15)', margin: '4px 0' }} />
+          <div key={i} style={{ height: 1, background: 'rgba(124,157,245,0.12)', margin: '4px 0' }} />
         ) : (
           <MenuItem key={item.action} label={item.label} onClick={() => handleAction(item.action)} />
         )

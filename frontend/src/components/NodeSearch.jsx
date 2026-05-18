@@ -40,7 +40,7 @@ export default function NodeSearch({ tree, onSelect, onClose }) {
     <div
       style={{
         position: 'fixed', inset: 0,
-        background: 'rgba(0, 0, 0, 0.7)',
+        background: 'rgba(0, 0, 0, 0.72)',
         zIndex: 400,
         display: 'flex',
         alignItems: 'center',
@@ -57,10 +57,10 @@ export default function NodeSearch({ tree, onSelect, onClose }) {
           style={{
             width: '100%',
             padding: '12px 16px',
-            background: 'rgba(10, 10, 30, 0.95)',
-            border: '1px solid rgba(74, 144, 217, 0.5)',
+            background: 'rgba(6, 6, 16, 0.97)',
+            border: '1px solid rgba(124,157,245,0.45)',
             borderRadius: results.length > 0 ? '8px 8px 0 0' : 8,
-            color: '#ffffff',
+            color: '#e2e2f2',
             fontFamily: 'monospace',
             fontSize: 14,
             outline: 'none',
@@ -69,8 +69,8 @@ export default function NodeSearch({ tree, onSelect, onClose }) {
         />
         {results.length > 0 && (
           <div style={{
-            background: 'rgba(10, 10, 30, 0.95)',
-            border: '1px solid rgba(74, 144, 217, 0.5)',
+            background: 'rgba(6, 6, 16, 0.97)',
+            border: '1px solid rgba(124,157,245,0.45)',
             borderTop: 'none',
             borderRadius: '0 0 8px 8px',
           }}>
@@ -85,7 +85,7 @@ export default function NodeSearch({ tree, onSelect, onClose }) {
                   style={{
                     padding: '8px 16px',
                     cursor: 'pointer',
-                    background: i === selectedIdx ? 'rgba(74, 144, 217, 0.15)' : 'transparent',
+                    background: i === selectedIdx ? 'rgba(124,157,245,0.12)' : 'transparent',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
@@ -99,10 +99,10 @@ export default function NodeSearch({ tree, onSelect, onClose }) {
                       background: dominantColor, flexShrink: 0,
                     }} />
                   )}
-                  <span style={{ color: '#ffffff', fontSize: 13, fontFamily: 'monospace', fontWeight: 500 }}>
+                  <span style={{ color: '#e2e2f2', fontSize: 13, fontFamily: 'monospace', fontWeight: 500 }}>
                     {node.name}
                   </span>
-                  <span style={{ color: '#555577', fontSize: 11, fontFamily: 'monospace', marginLeft: 'auto' }}>
+                  <span style={{ color: '#3a3a5e', fontSize: 11, fontFamily: 'monospace', marginLeft: 'auto' }}>
                     {truncPath}
                   </span>
                 </div>
