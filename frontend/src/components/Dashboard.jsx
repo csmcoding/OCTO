@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ThreeScene from './ThreeScene'
 import ScanButton from './ScanButton'
 import ScanTimestamp from './ScanTimestamp'
+import OctoWordmark from './OctoWordmark'
 import { loadTree } from '../utils/loadTree'
 
 export default function Dashboard() {
@@ -17,7 +18,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#0a0a0f' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
       <ThreeScene treeData={treeData} onLoadingChange={setLoading} />
       {loading && (
         <div style={{
@@ -37,6 +38,7 @@ export default function Dashboard() {
           loading subtree...
         </div>
       )}
+      <OctoWordmark />
       <ScanButton onScanComplete={handleScanComplete} />
       <ScanTimestamp scannedAt={scannedAt} />
     </div>

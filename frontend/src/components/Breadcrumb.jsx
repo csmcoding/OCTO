@@ -1,11 +1,12 @@
 import { useState } from 'react'
 
+const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SEP = ' › '
 
 export function buildCrumbList(navStack) {
   if (!navStack || navStack.length <= 1) return []
 
-  const label = (node) => node.name || node.path
+  const label = (node) => node.type === 'you' ? 'OCTO' : (node.name || node.path)
 
   if (navStack.length <= 5) {
     return navStack.map((node, index) => ({
@@ -16,7 +17,6 @@ export function buildCrumbList(navStack) {
     }))
   }
 
-  // first + "..." + last 3
   const first = {
     key: navStack[0].path || '0',
     label: label(navStack[0]),
@@ -47,14 +47,15 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
       top: 16,
       left: '50%',
       transform: 'translateX(-50%)',
-      background: 'rgba(8, 8, 24, 0.85)',
+      background: 'rgba(8, 8, 24, 0.88)',
       border: '1px solid rgba(74, 144, 217, 0.25)',
       backdropFilter: 'blur(4px)',
       borderRadius: 20,
       padding: '6px 16px',
-      fontFamily: 'monospace',
+      fontFamily: MONO,
       fontSize: 12,
-      color: '#aaaacc',
+      letterSpacing: '0.02em',
+      color: '#6666aa',
       zIndex: 200,
       whiteSpace: 'nowrap',
       userSelect: 'none',
@@ -82,10 +83,9 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
             </span>
           ) : (
             <span style={{
-              color: crumb.label === '...' ? '#334455' : '#ffffff',
+              color: crumb.label === '...' ? '#334455' : '#e0e0f0',
               fontWeight: crumb.label === '...' ? 400 : 600,
               padding: '2px 4px',
-              cursor: 'default',
             }}>
               {crumb.label}
             </span>

@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { triggerScan } from '../utils/loadTree'
 
-const BASE_STYLE = {
+const BASE = {
   position: 'fixed',
-  bottom: 24,
-  right: 24,
-  background: 'rgba(10, 10, 30, 0.92)',
-  border: '1px solid #4A90D9',
-  borderRadius: 6,
-  padding: '8px 16px',
-  fontFamily: 'monospace',
-  fontSize: 13,
-  cursor: 'pointer',
+  bottom: 20,
+  right: 20,
+  background: 'rgba(8, 8, 24, 0.88)',
+  border: '1px solid rgba(74, 144, 217, 0.25)',
+  borderRadius: 20,
+  padding: '6px 14px',
+  fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
+  fontSize: 12,
+  letterSpacing: '0.02em',
   zIndex: 100,
 }
 
@@ -38,32 +38,23 @@ export default function ScanButton({ onScanComplete }) {
     }
   }
 
-  if (status === 'scanning') {
-    return (
-      <div style={{ ...BASE_STYLE, color: '#4A90D9', cursor: 'default', borderColor: '#4A90D9' }}>
-        scanning... {count} dirs
-      </div>
-    )
-  }
-
-  if (status === 'done') {
-    return (
-      <div style={{ ...BASE_STYLE, color: '#44ff88', cursor: 'default', borderColor: '#44ff88' }}>
-        ✓ done — {total} dirs
-      </div>
-    )
-  }
-
-  if (status === 'error') {
-    return (
-      <div style={{ ...BASE_STYLE, color: '#FF4444', cursor: 'default', borderColor: '#FF4444' }}>
-        ✗ scan failed
-      </div>
-    )
-  }
-
+  if (status === 'scanning') return (
+    <div style={{ ...BASE, color: '#4A90D9', cursor: 'default', animation: 'scanPulse 1.5s ease-in-out infinite' }}>
+      scanning… {count} dirs
+    </div>
+  )
+  if (status === 'done') return (
+    <div style={{ ...BASE, color: '#44ff88', borderColor: 'rgba(68,255,136,0.25)', cursor: 'default' }}>
+      ✓ {total} dirs
+    </div>
+  )
+  if (status === 'error') return (
+    <div style={{ ...BASE, color: '#ff4444', borderColor: 'rgba(255,68,68,0.25)', cursor: 'default' }}>
+      ✗ scan failed
+    </div>
+  )
   return (
-    <button style={{ ...BASE_STYLE, color: '#4A90D9' }} onClick={handleClick}>
+    <button style={{ ...BASE, color: '#4A90D9', cursor: 'pointer' }} onClick={handleClick}>
       ⟳ Rescan
     </button>
   )
