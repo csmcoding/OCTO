@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getActiveSignals } from '../utils/signals'
 
-const API_BASE = 'http://localhost:7823'
-
 export function useGitDiff(node) {
   const [state, setState] = useState({
     summary: null, diff: null,
@@ -19,7 +17,7 @@ export function useGitDiff(node) {
     }
     let cancelled = false
     setState(s => ({ ...s, loading: true, error: null }))
-    fetch(`${API_BASE}/git-diff?path=${encodeURIComponent(node.path)}`)
+    fetch(`/git-diff?path=${encodeURIComponent(node.path)}`)
       .then(r => r.json())
       .then(data => {
         if (cancelled) return

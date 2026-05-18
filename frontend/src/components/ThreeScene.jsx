@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
-import { Vector3, MathUtils, BufferGeometry, BufferAttribute } from 'three'
+import { Vector3, MathUtils, BufferGeometry, BufferAttribute, FogExp2 } from 'three'
 import { loadTree, loadSubtree, openNode } from '../utils/loadTree'
+import ChangeRootButton from './ChangeRootButton'
 import { exportMarkdown, downloadMarkdown } from '../utils/exportMarkdown'
 import { buildTentacleLayout } from '../utils/buildTentacleLayout'
 import { useRevealProgress } from '../utils/useAnimationClock'
 import { getNodeColor } from '../utils/palette'
 import Tentacle from './Tentacle'
 import NodeMesh from './NodeMesh'
+import MarineSnow from './MarineSnow'
+import HoverRipple from './HoverRipple'
 import Panel from './Panel'
 import BackToProjectsButton from './BackToProjectsButton'
 import Breadcrumb from './Breadcrumb'
@@ -122,6 +125,7 @@ function KeyboardLegend() {
     ['⌘K',        'Search nodes'],
     ['S',         'Settings'],
     ['R',         'Rescan'],
+    ['O',         'Change directory'],
     ['Enter',     'Open selected'],
     ['Backspace', 'Go up one level'],
     ['Esc',       'Close / deselect'],
@@ -146,24 +150,24 @@ function KeyboardLegend() {
         ref={btnRef}
         onClick={handleToggle}
         style={{
-          background: 'rgba(8,8,22,0.75)',
-          border: '1px solid rgba(124,157,245,0.2)',
+          background: 'rgba(10,10,28,0.88)',
+          border: '1px solid rgba(124,157,245,0.45)',
           borderRadius: '50%',
-          width: 22, height: 22,
-          color: 'rgba(110,110,158,0.7)',
+          width: 26, height: 26,
+          color: '#a0a8d0',
           fontFamily: "'JetBrains Mono', monospace",
-          fontSize: 11, cursor: 'pointer',
+          fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
           e.currentTarget.style.color = '#e2e2f2'
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
-          e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
+          e.currentTarget.style.color = '#a0a8d0'
         }}
       >?</button>
 
@@ -217,9 +221,14 @@ function ZoomHint() {
   return (
     <div style={{
       position: 'fixed', bottom: 52, right: 20,
-      color: 'rgba(110,110,158,0.55)',
+      color: 'rgba(180,185,230,0.85)',
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: 10, letterSpacing: '0.08em',
+      background: 'rgba(6,6,18,0.82)',
+      border: '1px solid rgba(124,157,245,0.18)',
+      borderRadius: 8,
+      padding: '6px 10px',
+      backdropFilter: 'blur(8px)',
       animation: 'fadeIn 0.4s ease, fadeOut 0.6s ease 2.9s forwards',
       pointerEvents: 'none', userSelect: 'none',
       display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
@@ -259,11 +268,30 @@ function OverflowBadge({ total, visible }) {
 }
 
 function SceneBackground({ colorTheme }) {
-  const { gl } = useThree()
+  const { gl, scene } = useThree()
   useEffect(() => {
-    gl.setClearColor(colorTheme === 'deepspace' ? '#04040f' : '#03030a', 1)
-  }, [colorTheme, gl])
+    const themes = {
+      dark:      { bg: '#050508', fogColor: '#050508', density: 0.045 },
+      deepspace: { bg: '#04040f', fogColor: '#020210', density: 0.055 },
+    }
+    const t = themes[colorTheme] ?? themes.dark
+    gl.setClearColor(t.bg, 1)
+    scene.fog = new FogExp2(t.fogColor, t.density)
+    return () => { scene.fog = null }
+  }, [colorTheme, gl, scene])
   return null
+}
+
+function AnimatedFillLight() {
+  const lightRef = useRef()
+  useFrame(({ clock }) => {
+    if (!lightRef.current) return
+    const t = clock.getElapsedTime() * 0.12
+    lightRef.current.position.set(Math.sin(t) * 9, 3, Math.cos(t) * 9)
+  })
+  return (
+    <pointLight ref={lightRef} intensity={0.6} color="#1a2a6c" distance={22} decay={2} />
+  )
 }
 
 const SCENE_NODE_CAP = 80
@@ -321,6 +349,7 @@ function SceneObjects({
   return (
     <group>
       <StarField />
+      <MarineSnow sway={sway} />
       <Grid
         position={[0, -6, 0]}
         args={[30, 30]}
@@ -335,10 +364,10 @@ function SceneObjects({
         infiniteGrid
       />
 
-      <ambientLight intensity={colorTheme === 'deepspace' ? 0.3 : 0.5} color="#08083a" />
-      <pointLight position={[0, 0, 0]} intensity={3.0} color="#ffffff" distance={14} decay={2} />
-      <pointLight position={[0, 10, 5]} intensity={0.6} color="#7c9df5" distance={25} decay={2} />
-      <pointLight position={[0, -8, -6]} intensity={0.4} color="#c8a2ff" distance={20} decay={2} />
+      <ambientLight intensity={0.08} color="#06061a" />
+      <pointLight position={[0, 0, 0]} intensity={2.4} color="#4ecdc4" distance={14} decay={2} />
+      <pointLight position={[0, 10, 0]} intensity={0.5} color="#ffffff" distance={24} decay={2} />
+      <AnimatedFillLight />
 
       {parentNode && (
         <mesh position={[0, 0, 3]} scale={[0.5, 0.5, 0.5]}>
@@ -389,6 +418,7 @@ function SceneObjects({
               delay={delay}
               isSelected={selectedNodeId === node.id}
               showLabel={showLabels && hoveredId !== node.id}
+              index={i}
               onPointerEnter={(n, e) => {
                 onHoveredChange(node.id)
                 onHoverPosition?.(endPosition)
@@ -415,7 +445,7 @@ function findAncestorStack(root, targetPath) {
   return null
 }
 
-export default function ThreeScene({ treeData, onLoadingChange }) {
+export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChangeRoot }) {
   const [navStack, setNavStack] = useState([])
   const [selectedNode, setSelectedNode] = useState(null)
   const [hoveredEndPos, setHoveredEndPos] = useState(null)
@@ -446,17 +476,20 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
   const parentNode = navStack[navStack.length - 2] ?? null
 
   useEffect(() => {
+    setNavStack([])
+    setSelectedNode(null)
     const h = window.location.hash
     const hashPath = h.startsWith('#p=') ? decodeURIComponent(h.slice(3)) : null
-    loadTree(2).then(data => {
+    const loader = rootPath ? loadSubtree(rootPath, 2) : loadTree(2)
+    loader.then(data => {
       originalRootRef.current = data
-      if (hashPath) {
+      if (!rootPath && hashPath) {
         const stack = findAncestorStack(data, hashPath)
         if (stack?.length) { setNavStack(stack); return }
       }
       setNavStack([data])
     }).catch(console.error)
-  }, [])
+  }, [rootPath])
 
   useEffect(() => {
     if (treeData) {
@@ -582,6 +615,11 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
         return
       }
 
+      if ((e.key === 'o' || e.key === 'O') && !e.metaKey && !e.ctrlKey) {
+        onChangeRoot?.()
+        return
+      }
+
       if ((e.key === 'Backspace' || e.key === 'ArrowLeft') && !e.metaKey && !e.ctrlKey) {
         if (parentNode) {
           setNavStack(prev => prev.slice(0, -1))
@@ -598,7 +636,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [settingsOpen, searchOpen, selectedNode, parentNode, handleNodeDoubleClick, handleRescan])
+  }, [settingsOpen, searchOpen, selectedNode, parentNode, handleNodeDoubleClick, handleRescan, onChangeRoot])
 
   const showBack = navStack.length > 1
 
@@ -624,6 +662,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
         >
           <SceneBackground colorTheme={settings.colorTheme} />
           <CameraRig hoveredPosition={hoveredEndPos} autoRotate={settings.autoRotate} />
+          <HoverRipple position={hoveredEndPos} />
           {currentRoot && (
             <SceneObjects
               currentRoot={currentRoot}
@@ -660,6 +699,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
       {capInfo?.capped && (
         <OverflowBadge total={capInfo.total} visible={capInfo.visible} />
       )}
+      {onChangeRoot && <ChangeRootButton onClick={onChangeRoot} />}
       <button
         onClick={() => setSettingsOpen(v => !v)}
         style={{
@@ -667,26 +707,26 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
           bottom: 84,
           left: 20,
           zIndex: 90,
-          width: 22, height: 22,
+          width: 26, height: 26,
           borderRadius: '50%',
-          background: settingsOpen ? 'rgba(124,157,245,0.15)' : 'rgba(8,8,22,0.75)',
-          border: `1px solid ${settingsOpen ? 'rgba(124,157,245,0.45)' : 'rgba(124,157,245,0.2)'}`,
-          color: settingsOpen ? '#e2e2f2' : 'rgba(110,110,158,0.7)',
-          fontSize: 11, cursor: 'pointer',
+          background: settingsOpen ? 'rgba(124,157,245,0.15)' : 'rgba(10,10,28,0.88)',
+          border: `1px solid ${settingsOpen ? 'rgba(124,157,245,0.7)' : 'rgba(124,157,245,0.45)'}`,
+          color: settingsOpen ? '#e2e2f2' : '#a0a8d0',
+          fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
         }}
         onMouseEnter={e => {
           if (!settingsOpen) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
             e.currentTarget.style.color = '#e2e2f2'
           }
         }}
         onMouseLeave={e => {
           if (!settingsOpen) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
-            e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
+            e.currentTarget.style.color = '#a0a8d0'
           }
         }}
         aria-label="Settings"
@@ -702,23 +742,23 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
           bottom: 116,
           left: 20,
           zIndex: 90,
-          width: 22, height: 22,
+          width: 26, height: 26,
           borderRadius: '50%',
-          background: 'rgba(8,8,22,0.75)',
-          border: '1px solid rgba(124,157,245,0.2)',
-          color: 'rgba(110,110,158,0.7)',
-          fontSize: 11, cursor: 'pointer',
+          background: 'rgba(10,10,28,0.88)',
+          border: '1px solid rgba(124,157,245,0.45)',
+          color: '#a0a8d0',
+          fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
           e.currentTarget.style.color = '#e2e2f2'
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
-          e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
+          e.currentTarget.style.color = '#a0a8d0'
         }}
         aria-label="Export markdown"
         title="Export snapshot (.md)"
@@ -735,26 +775,26 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
           bottom: 148,
           left: 20,
           zIndex: 90,
-          width: 22, height: 22,
+          width: 26, height: 26,
           borderRadius: '50%',
-          background: shareCopied ? 'rgba(78,205,196,0.15)' : 'rgba(8,8,22,0.75)',
-          border: `1px solid ${shareCopied ? 'rgba(78,205,196,0.6)' : 'rgba(124,157,245,0.2)'}`,
-          color: shareCopied ? '#4ecdc4' : 'rgba(110,110,158,0.7)',
-          fontSize: 10, cursor: 'pointer',
+          background: shareCopied ? 'rgba(78,205,196,0.15)' : 'rgba(10,10,28,0.88)',
+          border: `1px solid ${shareCopied ? 'rgba(78,205,196,0.6)' : 'rgba(124,157,245,0.45)'}`,
+          color: shareCopied ? '#4ecdc4' : '#a0a8d0',
+          fontSize: 11, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
         }}
         onMouseEnter={e => {
           if (!shareCopied) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
             e.currentTarget.style.color = '#e2e2f2'
           }
         }}
         onMouseLeave={e => {
           if (!shareCopied) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
-            e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
+            e.currentTarget.style.color = '#a0a8d0'
           }
         }}
         aria-label="Copy share link"

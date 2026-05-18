@@ -306,6 +306,99 @@ async def get_node(path: str):
     }
 
 
+class RecentRequest(BaseModel):
+    path: str
+
+
+@app.get("/api/browse")
+async def browse_dirs(path: str = None):
+    p = Path(path).resolve() if path else Path.home()
+    if not p.exists() or not p.is_dir():
+        return JSONResponse({"error": "not a directory"}, status_code=400)
+    try:
+        entries = []
+        for e in sorted(p.iterdir(), key=lambda x: x.name.lower()):
+            if not e.is_dir():
+                continue
+            if e.name.startswith('.') and e.name not in {'.config'}:
+                continue
+            try:
+                child_count = sum(1 for _ in e.iterdir() if not _.name.startswith('.'))
+            except PermissionError:
+                child_count = 0
+            entries.append({
+                "name": e.name,
+                "path": str(e),
+                "childCount": child_count,
+                "hasChildren": child_count > 0,
+            })
+        return {
+            "path": str(p),
+            "parent": str(p.parent) if p != p.parent else None,
+            "entries": entries,
+        }
+    except PermissionError:
+        return JSONResponse({"error": "permission denied"}, status_code=403)
+
+
+_RECENTS_PATH = Path.home() / ".octo" / "recents.json"
+
+
+@app.get("/api/recents")
+async def get_recents():
+    if not _RECENTS_PATH.exists():
+        return {"recents": []}
+    try:
+        data = json.loads(_RECENTS_PATH.read_text())
+        valid = [r for r in data.get("recents", []) if Path(r["path"]).exists()]
+        return {"recents": valid[:5]}
+    except Exception:
+        return {"recents": []}
+
+
+@app.post("/api/recents")
+async def add_recent(req: RecentRequest):
+    p = Path(req.path)
+    if not p.exists() or not p.is_dir():
+        return JSONResponse({"error": "invalid path"}, status_code=400)
+    _RECENTS_PATH.parent.mkdir(exist_ok=True)
+    try:
+        existing = json.loads(_RECENTS_PATH.read_text()) if _RECENTS_PATH.exists() else {"recents": []}
+    except Exception:
+        existing = {"recents": []}
+    entries = [r for r in existing["recents"] if r["path"] != req.path]
+    entries.insert(0, {
+        "path": req.path,
+        "name": p.name,
+        "openedAt": datetime.now().isoformat(),
+    })
+    _RECENTS_PATH.write_text(json.dumps({"recents": entries[:5]}, indent=2))
+    return {"ok": True}
+
+
+@app.get("/api/validate")
+async def validate_path(path: str):
+    p = Path(path)
+    return {
+        "valid": p.exists() and p.is_dir(),
+        "exists": p.exists(),
+        "isDir": p.is_dir() if p.exists() else False,
+        "name": p.name if p.exists() else None,
+    }
+
+
+@app.get("/api/config")
+async def get_config():
+    octo_root = os.environ.get("OCTO_ROOT", "")
+    existing_roots = [r for r in config.SCAN_ROOTS if Path(r).exists()]
+    has_roots = bool(octo_root) or bool(existing_roots)
+    return {
+        "rootPath": octo_root,
+        "hasConfiguredRoots": has_roots,
+        "version": "0.1.0",
+    }
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.api:app", host="0.0.0.0", port=config.API_PORT)

@@ -18,7 +18,7 @@ describe('loadTree', () => {
     const fetch = mockFetch(true, { id: 'root' })
     vi.stubGlobal('fetch', fetch)
     await loadTree(2)
-    expect(fetch).toHaveBeenCalledWith('http://localhost:7823/tree?depth=2')
+    expect(fetch).toHaveBeenCalledWith('/tree?depth=2')
   })
 
   it('throws on non-ok response', async () => {
@@ -33,7 +33,7 @@ describe('loadSubtree', () => {
     vi.stubGlobal('fetch', fetch)
     await loadSubtree('/home/user/my dir', 3)
     expect(fetch).toHaveBeenCalledWith(
-      'http://localhost:7823/subtree?path=%2Fhome%2Fuser%2Fmy%20dir&depth=3'
+      '/subtree?path=%2Fhome%2Fuser%2Fmy%20dir&depth=3'
     )
   })
 

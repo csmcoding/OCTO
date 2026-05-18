@@ -1,19 +1,85 @@
-import React, { useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import React, { useRef, useState, useMemo, useEffect } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
 import { Text, Html } from '@react-three/drei'
-import { getActiveSignals } from '../utils/signals'
+import { Color, ShaderMaterial, AdditiveBlending } from 'three'
+import { getActiveSignals, SIGNAL_COLORS } from '../utils/signals'
 import { PALETTE, getNodeColor } from '../utils/palette'
 
-function PulsingLight({ color }) {
-  const lightRef = useRef()
+function makeFresnelMaterial(hexColor) {
+  return new ShaderMaterial({
+    uniforms: {
+      uColor:        { value: new Color(hexColor) },
+      uRimColor:     { value: new Color('#a8f0ee') },
+      uRimPower:     { value: 2.5 },
+      uRimIntensity: { value: 0.7 },
+      uPulse:        { value: 0.0 },
+      uSelected:     { value: 0.0 },
+      uHovered:      { value: 0.0 },
+      uOpacity:      { value: 0.0 },
+    },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+      void main() {
+        vec4 mvPos = modelViewMatrix * vec4(position, 1.0);
+        vNormal  = normalize(normalMatrix * normal);
+        vViewDir = normalize(-mvPos.xyz);
+        gl_Position = projectionMatrix * mvPos;
+      }
+    `,
+    fragmentShader: `
+      uniform vec3  uColor;
+      uniform vec3  uRimColor;
+      uniform float uRimPower;
+      uniform float uRimIntensity;
+      uniform float uPulse;
+      uniform float uSelected;
+      uniform float uHovered;
+      uniform float uOpacity;
+      varying vec3 vNormal;
+      varying vec3 vViewDir;
+
+      void main() {
+        float rim = pow(1.0 - max(dot(vViewDir, vNormal), 0.0), uRimPower);
+        float pulse = 0.5 + 0.5 * uPulse;
+
+        vec3 color = uColor * 0.4;
+        vec3 rimGlow = uRimColor * rim * uRimIntensity * pulse;
+        float boost = 1.0 + uHovered * 0.5 + uSelected * 0.8;
+
+        gl_FragColor = vec4((color + rimGlow) * boost, uOpacity);
+      }
+    `,
+    transparent: true,
+    depthWrite: true,
+  })
+}
+
+function SignalAura({ color, index }) {
+  const meshRef = useRef()
+  const { camera } = useThree()
 
   useFrame(({ clock }) => {
-    if (lightRef.current) {
-      lightRef.current.intensity = 0.5 + 0.5 * Math.sin(clock.elapsedTime * 3)
-    }
+    if (!meshRef.current) return
+    meshRef.current.quaternion.copy(camera.quaternion)
+    const t = clock.getElapsedTime()
+    meshRef.current.material.opacity = 0.1 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8 + index))
+    meshRef.current.scale.setScalar(1.0 + 0.12 * Math.sin(t * 1.4 + index * 0.5))
   })
 
-  return <pointLight ref={lightRef} color={color} distance={2} />
+  return (
+    <mesh ref={meshRef}>
+      <ringGeometry args={[0.50, 0.78, 48]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={0.25}
+        blending={AdditiveBlending}
+        depthWrite={false}
+        side={2}
+      />
+    </mesh>
+  )
 }
 
 function NodeMesh({
@@ -23,13 +89,14 @@ function NodeMesh({
   revealProgress = 1, delay = 0,
   isSelected = false,
   showLabel = true,
+  index = 0,
 }) {
   const [isHovered, setIsHovered] = useState(false)
   const activeSignals = getActiveSignals(node)
-  const hasSignal = activeSignals.length > 0
+  const hasSignals = activeSignals.length > 0
 
   const nodeColor = isSelected ? PALETTE.selected : getNodeColor(node)
-  const emissiveIntensity = isHovered ? 0.8 : hasSignal ? 0.4 : 0.35
+  const auraColor = SIGNAL_COLORS[activeSignals[0]] ?? '#4ecdc4'
 
   const baseRadius = node.type === 'folder'
     ? Math.min(0.55, 0.28 + (node.childCount ?? node.children?.length ?? 0) * 0.022)
@@ -37,9 +104,28 @@ function NodeMesh({
   const isAlert = activeSignals.some(k => k === 'gitDirty' || k === 'gitUnpushed')
   const radius = isAlert ? baseRadius * 1.12 : baseRadius
 
-  const nodeProgress = revealProgress >= 1
-    ? 1
-    : Math.max(0, Math.min((revealProgress * 1.2 - delay) / 0.4, 1))
+  const mat = useMemo(() => makeFresnelMaterial(nodeColor), [nodeColor])
+  useEffect(() => () => mat?.dispose(), [mat])
+
+  const isHoveredRef = useRef(isHovered)
+  isHoveredRef.current = isHovered
+  const isSelectedRef = useRef(isSelected)
+  isSelectedRef.current = isSelected
+  const revealRef = useRef({ revealProgress, delay })
+  revealRef.current = { revealProgress, delay }
+  const indexRef = useRef(index)
+  indexRef.current = index
+
+  useFrame(({ clock }) => {
+    if (!mat) return
+    const { revealProgress: rp, delay: d } = revealRef.current
+    const nodeProgress = rp >= 1 ? 1 : Math.max(0, Math.min((rp * 1.2 - d) / 0.4, 1))
+    const t = clock.getElapsedTime()
+    mat.uniforms.uPulse.value    = Math.sin(t * 1.2 + indexRef.current * 0.7)
+    mat.uniforms.uHovered.value  = isHoveredRef.current ? 1.0 : 0.0
+    mat.uniforms.uSelected.value = isSelectedRef.current ? 1.0 : 0.0
+    mat.uniforms.uOpacity.value  = nodeProgress
+  })
 
   return (
     <group position={position}>
@@ -60,19 +146,12 @@ function NodeMesh({
         }}
       >
         <sphereGeometry args={[radius, 32, 32]} />
-        <meshStandardMaterial
-          color="#0a0a1a"
-          emissive={nodeColor}
-          emissiveIntensity={emissiveIntensity}
-          transparent={nodeProgress < 1}
-          opacity={nodeProgress}
-          roughness={0.4}
-          metalness={0.5}
-        />
+        <primitive object={mat} attach="material" />
       </mesh>
 
-      {hasSignal && <PulsingLight color={nodeColor} />}
-      {hasSignal && (
+      {hasSignals && <SignalAura color={auraColor} index={index} />}
+
+      {hasSignals && (
         <Text position={[0, 0.6, 0]} fontSize={0.25} color={nodeColor} depthOffset={-1}>
           !
         </Text>
@@ -84,30 +163,32 @@ function NodeMesh({
         </mesh>
       )}
 
-      {showLabel && <Html
-        position={[0, -0.62, 0]}
-        center
-        distanceFactor={8}
-        occlude={false}
-        style={{ pointerEvents: 'none' }}
-      >
-        <div style={{
-          color: nodeColor + 'e6',
-          fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
-          fontSize: '11px',
-          fontWeight: 500,
-          whiteSpace: 'nowrap',
-          textAlign: 'center',
-          textShadow: `0 0 8px ${nodeColor}`,
-          userSelect: 'none',
-          maxWidth: '80px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          letterSpacing: '0.01em',
-        }}>
-          {node.name}
-        </div>
-      </Html>}
+      {showLabel && (
+        <Html
+          position={[0, -0.62, 0]}
+          center
+          distanceFactor={8}
+          occlude={false}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div style={{
+            color: nodeColor + 'e6',
+            fontFamily: "'Outfit', 'Inter', system-ui, sans-serif",
+            fontSize: '11px',
+            fontWeight: 500,
+            whiteSpace: 'nowrap',
+            textAlign: 'center',
+            textShadow: `0 0 8px ${nodeColor}`,
+            userSelect: 'none',
+            maxWidth: '80px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            letterSpacing: '0.01em',
+          }}>
+            {node.name}
+          </div>
+        </Html>
+      )}
     </group>
   )
 }

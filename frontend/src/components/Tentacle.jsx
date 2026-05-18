@@ -73,11 +73,11 @@ function Tentacle({
       <meshStandardMaterial
         color="#030308"
         emissive={color}
-        emissiveIntensity={hovered ? 0.7 : 0.2}
+        emissiveIntensity={0.08}
         transparent
-        opacity={hovered ? 0.9 : 0.5}
-        roughness={0.35}
-        metalness={0.4}
+        opacity={hovered ? 0.85 : 0.45}
+        roughness={0.6}
+        metalness={0.1}
       />
     </mesh>
   )
