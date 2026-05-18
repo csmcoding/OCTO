@@ -18,7 +18,7 @@ function statusLabel(status, defaultLabel) {
   return                           { text: '✗ failed',   color: '#ff4466' }
 }
 
-export default function Panel({ node, onClose }) {
+export default function Panel({ node, onClose, isPinned, onPin, onUnpin }) {
   const [openStatus, setOpenStatus] = useState({})
   const [hoverBtn, setHoverBtn] = useState(null)
 
@@ -69,6 +69,23 @@ export default function Panel({ node, onClose }) {
       zIndex: 100,
       animation: 'fadeIn 0.2s ease',
     }}>
+      <button
+        onClick={isPinned ? onUnpin : onPin}
+        title={isPinned ? 'Unpin' : 'Pin to tray'}
+        style={{
+          position: 'absolute', top: 14, right: 36,
+          background: 'none', border: 'none',
+          color: isPinned ? '#ffd93d' : 'rgba(110,110,158,0.45)',
+          cursor: 'pointer', fontSize: 13,
+          transition: 'color 0.15s, transform 0.15s',
+          lineHeight: 1,
+        }}
+        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.25)'}
+        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+      >
+        {isPinned ? '★' : '☆'}
+      </button>
+
       <button
         onClick={onClose}
         style={{

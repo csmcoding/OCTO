@@ -42,7 +42,7 @@ function MenuItem({ label, onClick }) {
   )
 }
 
-export default function NodeContextMenu({ node, position, onClose, onDrillIn }) {
+export default function NodeContextMenu({ node, position, onClose, onDrillIn, isPinned, onPinToggle }) {
   const menuRef = useRef()
 
   useEffect(() => {
@@ -57,7 +57,9 @@ export default function NodeContextMenu({ node, position, onClose, onDrillIn }) 
 
   const handleAction = async (action) => {
     onClose()
-    if (action === 'copyPath') {
+    if (action === 'pin') {
+      onPinToggle?.()
+    } else if (action === 'copyPath') {
       navigator.clipboard.writeText(node.path).catch(console.error)
     } else if (action === 'drillIn') {
       onDrillIn(node)
@@ -65,6 +67,12 @@ export default function NodeContextMenu({ node, position, onClose, onDrillIn }) 
       openNode(node.path, action).catch(console.error)
     }
   }
+
+  const items = [
+    ...getMenuItems(node),
+    { isDivider: true },
+    { label: isPinned ? '★  Unpin' : '☆  Pin to tray', action: 'pin' },
+  ]
 
   return (
     <div
@@ -84,7 +92,7 @@ export default function NodeContextMenu({ node, position, onClose, onDrillIn }) 
         animation: 'fadeIn 0.12s ease',
       }}
     >
-      {getMenuItems(node).map((item, i) =>
+      {items.map((item, i) =>
         item.isDivider ? (
           <div key={i} style={{ height: 1, background: 'rgba(124,157,245,0.12)', margin: '4px 0' }} />
         ) : (
