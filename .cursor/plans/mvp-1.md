@@ -651,3 +651,28 @@ crashing the component on every first render.
 shortcut `useEffect`. No logic changes — pure reorder.
 
 - Verified: 47 frontend tests pass, build clean, scene renders again
+
+---
+
+## PROMPT 23 HANDOFF — Minimap + Pinned Favorites (commit 88296aa)
+- Status: COMPLETE
+- New: Minimap component — 2D Canvas, top-down XZ projection,
+  DPR-aware, animated per-frame via rAF, click-to-select, concentric rings,
+  glow on hovered/selected dots. Positioned bottom-right (154×154px).
+- New: layout and hoveredId lifted from SceneObjects to ThreeScene state.
+  SceneObjects gains onLayoutReady (calls setLayout), hoveredId prop, and
+  onHoveredChange (calls setHoveredId). setLayout/setHoveredId are stable
+  useState setters — no stale closure or infinite loop risk.
+- New: PinTray — pill row fixed bottom-center, per-session memory,
+  jump (navigates tree via findAncestorStack) + unpin × button on hover.
+  Renders null when pins empty — no empty bar.
+- New: Pin/unpin via Panel ☆/★ button (top:14 right:36, yellow when pinned)
+  and context menu "☆ Pin to tray" / "★ Unpin" item.
+- New: handlePin, handleUnpin, handleJump useCallbacks in ThreeScene.
+  handleJump uses findAncestorStack — same pattern as handleSearchSelect.
+- New: pins.test.js — 4 tests for pinReducer (pin, no-dup, unpin, no-op).
+- Layout: Minimap right:20, PinTray center max-width calc(100vw-220px),
+  KeyboardLegend left:20 — three fixed-bottom elements don't overlap.
+- Tests: 51/51 passing (47 existing + 4 new). 25 backend tests pass.
+- Build clean.
+- Next: PROMPT 24 — file preview in Panel + git diff summary
