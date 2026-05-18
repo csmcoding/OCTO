@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Vector3, MathUtils } from 'three'
+import { Grid } from '@react-three/drei'
+import { Vector3, MathUtils, BufferGeometry, BufferAttribute } from 'three'
 import { loadTree, loadSubtree, openNode } from '../utils/loadTree'
 import { buildTentacleLayout } from '../utils/buildTentacleLayout'
 import { useRevealProgress } from '../utils/useAnimationClock'
@@ -20,18 +21,29 @@ function CameraRig({ hoveredPosition }) {
   const spring = useRef({ x: 0, y: 4, z: 10 })
   const lookTarget = useRef(new Vector3(0, 0, 0))
   const rRef = useRef(10)
+  const zoomRef = useRef(1.0)
 
   useEffect(() => {
     rRef.current = size.width < 900 ? 13 : 10
   }, [size.width])
 
+  useEffect(() => {
+    const onWheel = (e) => {
+      e.preventDefault()
+      const delta = e.deltaY > 0 ? 1.08 : 0.93
+      zoomRef.current = Math.min(3.5, Math.max(0.45, zoomRef.current * delta))
+    }
+    window.addEventListener('wheel', onWheel, { passive: false })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [])
+
   useFrame((_, delta) => {
     base.current.theta += delta * 0.08
 
-    const r = rRef.current
-    let tx = Math.sin(base.current.theta) * r
-    let ty = 4
-    let tz = Math.cos(base.current.theta) * r
+    const baseR = rRef.current * zoomRef.current
+    let tx = Math.sin(base.current.theta) * baseR
+    let ty = 4 * zoomRef.current
+    let tz = Math.cos(base.current.theta) * baseR
 
     if (hoveredPosition) {
       tx += hoveredPosition.x * 0.08
@@ -51,6 +63,55 @@ function CameraRig({ hoveredPosition }) {
   return null
 }
 
+function StarField() {
+  const geo = useMemo(() => {
+    const g = new BufferGeometry()
+    const count = 280
+    const pos = new Float32Array(count * 3)
+    for (let i = 0; i < count; i++) {
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+      const r = 30 + Math.random() * 20
+      pos[i * 3]     = r * Math.sin(phi) * Math.cos(theta)
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta)
+      pos[i * 3 + 2] = r * Math.cos(phi)
+    }
+    g.setAttribute('position', new BufferAttribute(pos, 3))
+    return g
+  }, [])
+
+  return (
+    <points geometry={geo}>
+      <pointsMaterial color="#8888cc" size={0.06} sizeAttenuation transparent opacity={0.4} />
+    </points>
+  )
+}
+
+function ZoomHint() {
+  const [visible, setVisible] = useState(true)
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(false), 3500)
+    return () => clearTimeout(t)
+  }, [])
+  if (!visible) return null
+  return (
+    <div style={{
+      position: 'fixed', bottom: 52, right: 20,
+      color: 'rgba(110,110,158,0.55)',
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 10, letterSpacing: '0.08em',
+      animation: 'fadeIn 0.4s ease, fadeOut 0.6s ease 2.9s forwards',
+      pointerEvents: 'none', userSelect: 'none',
+      display: 'flex', flexDirection: 'column', alignItems: 'flex-end',
+      gap: 3,
+    }}>
+      <span>scroll  ↕  zoom</span>
+      <span>click  ·  select</span>
+      <span>dblclick  ·  enter</span>
+    </div>
+  )
+}
+
 function SceneObjects({
   currentRoot, parentNode, ringKey, selectedNodeId,
   onNodeClick, onNodeDoubleClick, onNodeContextMenu,
@@ -58,11 +119,9 @@ function SceneObjects({
   onHoverPosition,
 }) {
   const [hoveredId, setHoveredId] = useState(null)
-  const { viewport } = useThree()
 
   const nodeCount = currentRoot?.children?.length ?? 0
-  const baseRadius = Math.max(4.5, Math.min(7.5, nodeCount * 0.35 + 3.5))
-  const radius = baseRadius * Math.max(1, 1 / Math.max(viewport.aspect, 0.5) * 0.8)
+  const radius = Math.max(3.8, Math.min(6.0, nodeCount * 0.28 + 3.0))
 
   const layout = useMemo(
     () => buildTentacleLayout(currentRoot?.children ?? [], radius),
@@ -81,6 +140,21 @@ function SceneObjects({
 
   return (
     <group>
+      <StarField />
+      <Grid
+        position={[0, -6, 0]}
+        args={[30, 30]}
+        cellSize={1}
+        cellThickness={0.3}
+        cellColor="#1a1a3a"
+        sectionSize={5}
+        sectionThickness={0.8}
+        sectionColor="#2a2a4a"
+        fadeDistance={20}
+        fadeStrength={2}
+        infiniteGrid
+      />
+
       <ambientLight intensity={0.5} color="#08083a" />
       <pointLight position={[0, 0, 0]} intensity={3.0} color="#ffffff" distance={14} decay={2} />
       <pointLight position={[0, 10, 5]} intensity={0.6} color="#7c9df5" distance={25} decay={2} />
@@ -264,7 +338,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
             gl.setClearColor('#03030a', 1)
             gl.setPixelRatio(Math.min(window.devicePixelRatio, 2))
           }}
-          camera={{ position: [0, 4, 10], fov: 52, near: 0.1, far: 100 }}
+          camera={{ position: [0, 4, 10], fov: 62, near: 0.1, far: 100 }}
           gl={{ antialias: true, alpha: false }}
           style={{ width: '100%', height: '100%', display: 'block' }}
           resize={{ debounce: 50 }}
@@ -289,6 +363,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
           )}
         </Canvas>
       </div>
+      <ZoomHint />
       <NodeTooltip node={tooltip.node} position={{ x: tooltip.x, y: tooltip.y }} />
       {selectedNode && (
         <Panel node={selectedNode} onClose={() => setSelectedNode(null)} />

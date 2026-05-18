@@ -30,6 +30,12 @@ export default function NodeMesh({
   const nodeColor = isSelected ? PALETTE.selected : getNodeColor(node)
   const emissiveIntensity = isHovered ? 0.8 : hasSignal ? 0.4 : 0.35
 
+  const baseRadius = node.type === 'folder'
+    ? Math.min(0.55, 0.28 + (node.childCount ?? node.children?.length ?? 0) * 0.022)
+    : Math.min(0.45, 0.20 + Math.log1p(node.size ?? 0) * 0.012)
+  const isAlert = activeSignals.some(k => k === 'gitDirty' || k === 'gitUnpushed')
+  const radius = isAlert ? baseRadius * 1.12 : baseRadius
+
   const nodeProgress = revealProgress >= 1
     ? 1
     : Math.max(0, Math.min((revealProgress * 1.2 - delay) / 0.4, 1))
@@ -37,7 +43,6 @@ export default function NodeMesh({
   return (
     <group position={position}>
       <mesh
-        scale={hasSignal ? 1.1 : 1}
         onClick={(e) => { e.stopPropagation(); onClick?.(node) }}
         onDoubleClick={(e) => { e.stopPropagation(); onDoubleClick?.(node) }}
         onContextMenu={(e) => { e.stopPropagation(); onContextMenu?.(node, e) }}
@@ -53,7 +58,7 @@ export default function NodeMesh({
           onPointerLeave?.(node, e)
         }}
       >
-        <sphereGeometry args={[0.38, 32, 32]} />
+        <sphereGeometry args={[radius, 32, 32]} />
         <meshStandardMaterial
           color="#0a0a1a"
           emissive={nodeColor}

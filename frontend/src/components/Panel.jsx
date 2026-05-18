@@ -50,16 +50,21 @@ export default function Panel({ node, onClose }) {
   return (
     <div style={{
       position: 'fixed',
-      bottom: 52,
+      bottom: 56,
       left: 20,
-      width: 256,
-      background: 'rgba(6, 6, 16, 0.95)',
-      border: '1px solid rgba(124,157,245,0.18)',
-      borderLeft: `2px solid ${nodeColor}`,
-      borderRadius: 10,
-      backdropFilter: 'blur(16px)',
-      boxShadow: `0 0 0 1px rgba(124,157,245,0.05), 0 12px 40px rgba(0,0,0,0.75), 0 0 20px ${nodeColor}18`,
-      padding: '16px 18px 16px 16px',
+      width: 268,
+      background: 'rgba(8, 8, 22, 0.90)',
+      border: '1px solid rgba(124,157,245,0.15)',
+      borderTop: `2px solid ${nodeColor}`,
+      borderRadius: 12,
+      backdropFilter: 'blur(24px) saturate(160%)',
+      WebkitBackdropFilter: 'blur(24px) saturate(160%)',
+      boxShadow: [
+        '0 0 0 1px rgba(124,157,245,0.05)',
+        '0 24px 64px rgba(0,0,0,0.85)',
+        'inset 0 1px 0 rgba(255,255,255,0.04)',
+      ].join(', '),
+      padding: '16px 18px',
       fontFamily: MONO,
       zIndex: 100,
       animation: 'fadeIn 0.2s ease',
@@ -86,14 +91,14 @@ export default function Panel({ node, onClose }) {
         ×
       </button>
 
-      <div style={{ fontSize: 13, fontWeight: 600, color: nodeColor, letterSpacing: '0.02em', marginBottom: 3, paddingRight: 20 }}>
+      <div style={{ fontFamily: "'Outfit', 'Inter', sans-serif", fontSize: 15, fontWeight: 600, color: nodeColor, letterSpacing: '-0.01em', marginBottom: 3, paddingRight: 22, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {node.name}
       </div>
-      <div style={{ fontSize: 9, color: '#3a3a5e', marginBottom: 11, wordBreak: 'break-all' }}>
+      <div style={{ fontSize: 9, color: 'rgba(110,110,158,0.55)', marginBottom: 10, wordBreak: 'break-all', lineHeight: 1.5 }}>
         {displayPath}
       </div>
 
-      <div style={{ height: 1, background: `${nodeColor}20`, margin: '0 0 10px' }} />
+      <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '0 0 10px' }} />
 
       <div style={{ marginBottom: 11 }}>
         {activeSignals.length === 0 ? (
@@ -125,14 +130,14 @@ export default function Panel({ node, onClose }) {
                 style={{
                   fontFamily: MONO,
                   fontSize: 10,
-                  padding: '4px 9px',
-                  borderRadius: 4,
-                  background: isHov ? 'rgba(124,157,245,0.14)' : 'rgba(124,157,245,0.06)',
-                  border: `1px solid ${isHov ? 'rgba(124,157,245,0.4)' : 'rgba(124,157,245,0.18)'}`,
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  background: isHov ? 'rgba(124,157,245,0.16)' : 'rgba(124,157,245,0.07)',
+                  border: `1px solid ${isHov ? 'rgba(124,157,245,0.38)' : 'rgba(124,157,245,0.18)'}`,
                   color: isHov ? '#e2e2f2' : st.color,
-                  letterSpacing: '0.03em',
+                  letterSpacing: '0.02em',
                   cursor: 'pointer',
-                  transition: 'all 0.12s ease',
+                  transition: 'background 0.15s, border-color 0.15s',
                 }}
                 onClick={() => handleOpen(action)}
                 onMouseEnter={() => setHoverBtn(action)}

@@ -1,3 +1,7 @@
+import { getActiveSignals } from './signals'
+
+const ALERT_SIGNALS = new Set(['gitDirty', 'gitUnpushed'])
+
 export const PALETTE = {
   // Scene backgrounds
   void:          '#03030a',
@@ -25,7 +29,8 @@ export const PALETTE = {
 }
 
 export function getNodeColor(node) {
-  if (node.dominantSignal) return PALETTE.signal
+  const active = getActiveSignals(node)
+  if (active.some(k => ALERT_SIGNALS.has(k))) return PALETTE.signal
   if (node.type === 'folder') return PALETTE.folder
   return PALETTE.file
 }
