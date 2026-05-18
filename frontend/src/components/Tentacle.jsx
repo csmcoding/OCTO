@@ -7,6 +7,7 @@ export default function Tentacle({
   curve, basePoints, index,
   color = '#4ecdc4', hovered = false,
   revealProgress = 1, delay = 0,
+  sway = true,
 }) {
   const meshRef = useRef()
   const frame = useRef(0)
@@ -37,7 +38,7 @@ export default function Tentacle({
     }
     meshRef.current.visible = true
 
-    swayTentacle(curve, basePoints, index, now)
+    if (sway) swayTentacle(curve, basePoints, index, now)
 
     if (frame.current % 3 !== 0) return
 

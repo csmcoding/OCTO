@@ -16,8 +16,9 @@ import NodeSearch from './NodeSearch'
 import NodeContextMenu from './NodeContextMenu'
 import Minimap from './Minimap'
 import PinTray from './PinTray'
+import SettingsPanel from './SettingsPanel'
 
-function CameraRig({ hoveredPosition }) {
+function CameraRig({ hoveredPosition, autoRotate }) {
   const { camera, size } = useThree()
   const base = useRef({ theta: 0 })
   const spring = useRef({ x: 0, y: 4, z: 10 })
@@ -63,7 +64,7 @@ function CameraRig({ hoveredPosition }) {
   }, [])
 
   useFrame((_, delta) => {
-    base.current.theta += delta * 0.08
+    if (autoRotate) base.current.theta += delta * 0.08
 
     const baseR = rRef.current * zoomRef.current
     let tx = Math.sin(base.current.theta) * baseR
@@ -118,6 +119,7 @@ function KeyboardLegend() {
   const btnRef = useRef(null)
   const shortcuts = [
     ['⌘K',        'Search nodes'],
+    ['S',         'Settings'],
     ['Enter',     'Open selected'],
     ['Backspace', 'Go up one level'],
     ['Esc',       'Close / deselect'],
@@ -228,12 +230,21 @@ function ZoomHint() {
   )
 }
 
+function SceneBackground({ colorTheme }) {
+  const { gl } = useThree()
+  useEffect(() => {
+    gl.setClearColor(colorTheme === 'deepspace' ? '#04040f' : '#03030a', 1)
+  }, [colorTheme, gl])
+  return null
+}
+
 function SceneObjects({
   currentRoot, parentNode, ringKey, selectedNodeId,
   onNodeClick, onNodeDoubleClick, onNodeContextMenu,
   onPointerEnter, onPointerMove, onPointerLeave,
   onHoverPosition,
   hoveredId, onHoveredChange, onLayoutReady,
+  showLabels, sway, colorTheme,
 }) {
   const nodeCount = currentRoot?.children?.length ?? 0
   const radius = Math.max(3.8, Math.min(6.0, nodeCount * 0.28 + 3.0))
@@ -273,7 +284,7 @@ function SceneObjects({
         infiniteGrid
       />
 
-      <ambientLight intensity={0.5} color="#08083a" />
+      <ambientLight intensity={colorTheme === 'deepspace' ? 0.3 : 0.5} color="#08083a" />
       <pointLight position={[0, 0, 0]} intensity={3.0} color="#ffffff" distance={14} decay={2} />
       <pointLight position={[0, 10, 5]} intensity={0.6} color="#7c9df5" distance={25} decay={2} />
       <pointLight position={[0, -8, -6]} intensity={0.4} color="#c8a2ff" distance={20} decay={2} />
@@ -316,6 +327,7 @@ function SceneObjects({
               hovered={isHovered}
               revealProgress={revealProgress}
               delay={delay}
+              sway={sway}
             />
             <NodeMesh
               node={node}
@@ -326,7 +338,7 @@ function SceneObjects({
               revealProgress={revealProgress}
               delay={delay}
               isSelected={selectedNodeId === node.id}
-              showLabel={hoveredId !== node.id}
+              showLabel={showLabels && hoveredId !== node.id}
               onPointerEnter={(n, e) => {
                 onHoveredChange(node.id)
                 onHoverPosition?.(endPosition)
@@ -364,9 +376,20 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
   const [tooltip, setTooltip] = useState({ node: null, x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState({ node: null, x: 0, y: 0 })
   const [searchOpen, setSearchOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [layout, setLayout] = useState([])
   const [hoveredId, setHoveredId] = useState(null)
   const [pins, setPins] = useState([])
+  const [settings, setSettings] = useState({
+    autoRotate: true,
+    showLabels: true,
+    sway:       true,
+    scanDepth:  2,
+    colorTheme: 'dark',
+  })
+  const setSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }))
+  const scanDepthRef = useRef(2)
+  scanDepthRef.current = settings.scanDepth
   const originalRootRef = useRef(null)
 
   const currentRoot = navStack[navStack.length - 1] ?? null
@@ -397,7 +420,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
     if (node.hasChildren && node.children.length === 0) {
       onLoadingChange(true)
       try {
-        target = await loadSubtree(node.path, 3)
+        target = await loadSubtree(node.path, scanDepthRef.current)
       } catch (e) {
         console.error('subtree load failed', e)
         onLoadingChange(false)
@@ -461,8 +484,14 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
       }
 
       if (e.key === 'Escape') {
-        if (searchOpen) { setSearchOpen(false); return }
-        if (selectedNode) { setSelectedNode(null); return }
+        if (settingsOpen) { setSettingsOpen(false); return }
+        if (searchOpen)   { setSearchOpen(false);   return }
+        if (selectedNode) { setSelectedNode(null);  return }
+        return
+      }
+
+      if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey) {
+        setSettingsOpen(v => !v)
         return
       }
 
@@ -482,7 +511,7 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [searchOpen, selectedNode, parentNode, handleNodeDoubleClick])
+  }, [settingsOpen, searchOpen, selectedNode, parentNode, handleNodeDoubleClick])
 
   const showBack = navStack.length > 1
 
@@ -506,7 +535,8 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
           style={{ width: '100%', height: '100%', display: 'block' }}
           resize={{ debounce: 50 }}
         >
-          <CameraRig hoveredPosition={hoveredEndPos} />
+          <SceneBackground colorTheme={settings.colorTheme} />
+          <CameraRig hoveredPosition={hoveredEndPos} autoRotate={settings.autoRotate} />
           {currentRoot && (
             <SceneObjects
               currentRoot={currentRoot}
@@ -531,11 +561,53 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
               hoveredId={hoveredId}
               onHoveredChange={setHoveredId}
               onLayoutReady={setLayout}
+              showLabels={settings.showLabels}
+              sway={settings.sway}
+              colorTheme={settings.colorTheme}
             />
           )}
         </Canvas>
       </div>
       <ZoomHint />
+      <button
+        onClick={() => setSettingsOpen(v => !v)}
+        style={{
+          position: 'fixed',
+          bottom: 84,
+          left: 20,
+          zIndex: 90,
+          width: 22, height: 22,
+          borderRadius: '50%',
+          background: settingsOpen ? 'rgba(124,157,245,0.15)' : 'rgba(8,8,22,0.75)',
+          border: `1px solid ${settingsOpen ? 'rgba(124,157,245,0.45)' : 'rgba(124,157,245,0.2)'}`,
+          color: settingsOpen ? '#e2e2f2' : 'rgba(110,110,158,0.7)',
+          fontSize: 11, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background 0.15s, border-color 0.15s, color 0.15s',
+          backdropFilter: 'blur(8px)',
+        }}
+        onMouseEnter={e => {
+          if (!settingsOpen) {
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+            e.currentTarget.style.color = '#e2e2f2'
+          }
+        }}
+        onMouseLeave={e => {
+          if (!settingsOpen) {
+            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
+            e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+          }
+        }}
+        aria-label="Settings"
+        title="Settings"
+      >⚙</button>
+      {settingsOpen && (
+        <SettingsPanel
+          settings={settings}
+          setSetting={setSetting}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
       <KeyboardLegend />
       <Minimap
         layout={layout}
