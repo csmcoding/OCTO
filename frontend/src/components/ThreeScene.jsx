@@ -14,6 +14,8 @@ import Breadcrumb from './Breadcrumb'
 import NodeTooltip from './NodeTooltip'
 import NodeSearch from './NodeSearch'
 import NodeContextMenu from './NodeContextMenu'
+import Minimap from './Minimap'
+import PinTray from './PinTray'
 
 function CameraRig({ hoveredPosition }) {
   const { camera, size } = useThree()
@@ -208,9 +210,8 @@ function SceneObjects({
   onNodeClick, onNodeDoubleClick, onNodeContextMenu,
   onPointerEnter, onPointerMove, onPointerLeave,
   onHoverPosition,
+  hoveredId, onHoveredChange, onLayoutReady,
 }) {
-  const [hoveredId, setHoveredId] = useState(null)
-
   const nodeCount = currentRoot?.children?.length ?? 0
   const radius = Math.max(3.8, Math.min(6.0, nodeCount * 0.28 + 3.0))
 
@@ -219,6 +220,9 @@ function SceneObjects({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [currentRoot, radius],
   )
+
+  useEffect(() => { onLayoutReady?.(layout) }, [layout, onLayoutReady])
+
   const revealProgress = useRevealProgress(ringKey, 1200)
 
   const centerRef = useRef()
@@ -301,13 +305,13 @@ function SceneObjects({
               isSelected={selectedNodeId === node.id}
               showLabel={hoveredId !== node.id}
               onPointerEnter={(n, e) => {
-                setHoveredId(node.id)
+                onHoveredChange(node.id)
                 onHoverPosition?.(endPosition)
                 onPointerEnter?.(n, e)
               }}
               onPointerMove={onPointerMove}
               onPointerLeave={() => {
-                setHoveredId(null)
+                onHoveredChange(null)
                 onHoverPosition?.(null)
                 onPointerLeave?.()
               }}
@@ -337,6 +341,9 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
   const [tooltip, setTooltip] = useState({ node: null, x: 0, y: 0 })
   const [contextMenu, setContextMenu] = useState({ node: null, x: 0, y: 0 })
   const [searchOpen, setSearchOpen] = useState(false)
+  const [layout, setLayout] = useState([])
+  const [hoveredId, setHoveredId] = useState(null)
+  const [pins, setPins] = useState([])
   const originalRootRef = useRef(null)
 
   const currentRoot = navStack[navStack.length - 1] ?? null
@@ -400,6 +407,24 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
     }
     setSelectedNode(node)
     setSearchOpen(false)
+  }, [])
+
+  const handlePin = useCallback((node) => {
+    setPins(prev => prev.some(p => p.id === node.id) ? prev : [...prev, node])
+  }, [])
+
+  const handleUnpin = useCallback((node) => {
+    setPins(prev => prev.filter(p => p.id !== node.id))
+  }, [])
+
+  const handleJump = useCallback((node) => {
+    const fullStack = findAncestorStack(originalRootRef.current, node.path)
+    if (fullStack && fullStack.length > 1) {
+      setNavStack(node.type === 'folder' ? fullStack : fullStack.slice(0, -1))
+    } else {
+      setNavStack([originalRootRef.current])
+    }
+    setSelectedNode(node)
   }, [])
 
   useEffect(() => {
@@ -480,15 +505,31 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
               onPointerMove={(node, e) => setTooltip({ node, x: e.clientX, y: e.clientY })}
               onPointerLeave={() => setTooltip({ node: null, x: 0, y: 0 })}
               onHoverPosition={setHoveredEndPos}
+              hoveredId={hoveredId}
+              onHoveredChange={setHoveredId}
+              onLayoutReady={setLayout}
             />
           )}
         </Canvas>
       </div>
       <ZoomHint />
       <KeyboardLegend />
+      <Minimap
+        layout={layout}
+        hoveredId={hoveredId}
+        selectedId={selectedNode?.id}
+        onNodeClick={setSelectedNode}
+      />
+      <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} />
       <NodeTooltip node={tooltip.node} x={tooltip.x} y={tooltip.y} />
       {selectedNode && (
-        <Panel node={selectedNode} onClose={() => setSelectedNode(null)} />
+        <Panel
+          node={selectedNode}
+          onClose={() => setSelectedNode(null)}
+          isPinned={pins.some(p => p.id === selectedNode?.id)}
+          onPin={() => handlePin(selectedNode)}
+          onUnpin={() => handleUnpin(selectedNode)}
+        />
       )}
       {showBack && (
         <BackToProjectsButton
@@ -507,6 +548,11 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
           onDrillIn={(node) => {
             setContextMenu({ node: null, x: 0, y: 0 })
             handleDrillIn(node)
+          }}
+          isPinned={pins.some(p => p.id === contextMenu.node?.id)}
+          onPinToggle={() => {
+            const n = contextMenu.node
+            pins.some(p => p.id === n.id) ? handleUnpin(n) : handlePin(n)
           }}
         />
       )}
