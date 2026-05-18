@@ -676,3 +676,31 @@ shortcut `useEffect`. No logic changes — pure reorder.
 - Tests: 51/51 passing (47 existing + 4 new). 25 backend tests pass.
 - Build clean.
 - Next: PROMPT 24 — file preview in Panel + git diff summary
+
+---
+
+## PROMPT 24 HANDOFF — File Preview + Git Diff + Pinch Fix (commit c32bf03)
+- Status: COMPLETE
+- New: /preview endpoint (backend/api.py) — first N lines, language detection
+  via _detect_language(), 500KB size guard, binary MIME guard, errors="replace"
+- New: /git-diff endpoint — git rev-parse → git diff HEAD --stat + raw diff,
+  80-line truncation, 5s/10s timeouts, summary line parsed from stat output
+- Fixed: CORS now allows both 5173 and 5174 (dev server port can vary)
+- New: useFilePreview hook — exports buildPreviewUrl + shouldFetchPreview for
+  testability; cancel-safe (cancelled flag in useEffect cleanup)
+- New: useGitDiff hook — only fetches when gitDirty/gitUnpushed active;
+  re-fetches on node.path or node.dominantSignal change
+- New: Panel file preview section — line numbers, monospace code block,
+  scrollable 180px, truncation indicator
+- New: Panel git diff section — colored add(teal)/del(red)/hunk(blue) lines,
+  summary row, scrollable 140px block
+- New: Panel maxHeight calc(100vh-80px) + overflowY:auto for tall content
+- Fixed: touch pinch-zoom — viewport meta user-scalable=no + touchmove handler
+  in CameraRig (passive:false, pinch dist ratio → zoomRef, reset on touchend)
+- Note: no Vite proxy — hooks use API_BASE = 'http://localhost:7823' directly,
+  matching existing loadTree.js pattern
+- Note: no @testing-library/react installed — hook tests are pure function
+  tests of exported helpers (buildPreviewUrl, shouldFetchPreview)
+- Tests: 54 frontend + 29 backend passing. Build clean.
+- Next: PROMPT 25 — settings panel (auto-rotation toggle, label visibility,
+  color theme, scan depth)
