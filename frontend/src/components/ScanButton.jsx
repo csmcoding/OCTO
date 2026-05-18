@@ -3,10 +3,10 @@ import { triggerScan } from '../utils/loadTree'
 
 const BASE = {
   position: 'fixed',
-  bottom: 20,
+  bottom: 182,
   right: 20,
-  background: 'rgba(6, 6, 16, 0.88)',
-  border: '1px solid rgba(124,157,245,0.22)',
+  background: 'rgba(6, 6, 16, 0.92)',
+  border: '1px solid rgba(124,157,245,0.4)',
   borderRadius: 20,
   padding: '6px 14px',
   fontFamily: "'JetBrains Mono', 'Fira Mono', monospace",
