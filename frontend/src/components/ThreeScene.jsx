@@ -339,40 +339,6 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
     }
   }, [treeData])
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
-
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        setSearchOpen(v => !v)
-        return
-      }
-
-      if (e.key === 'Escape') {
-        if (searchOpen) { setSearchOpen(false); return }
-        if (selectedNode) { setSelectedNode(null); return }
-        return
-      }
-
-      if ((e.key === 'Backspace' || e.key === 'ArrowLeft') && !e.metaKey && !e.ctrlKey) {
-        if (parentNode) {
-          setNavStack(prev => prev.slice(0, -1))
-          setSelectedNode(null)
-        }
-        return
-      }
-
-      if (e.key === 'Enter' && selectedNode) {
-        handleNodeDoubleClick(selectedNode)
-        return
-      }
-    }
-
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [searchOpen, selectedNode, parentNode, handleNodeDoubleClick])
-
   const [revealKey, setRevealKey] = useState(0)
   useEffect(() => {
     if (currentRoot) setRevealKey(k => k + 1)
@@ -417,6 +383,40 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
     setSelectedNode(node)
     setSearchOpen(false)
   }, [])
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(v => !v)
+        return
+      }
+
+      if (e.key === 'Escape') {
+        if (searchOpen) { setSearchOpen(false); return }
+        if (selectedNode) { setSelectedNode(null); return }
+        return
+      }
+
+      if ((e.key === 'Backspace' || e.key === 'ArrowLeft') && !e.metaKey && !e.ctrlKey) {
+        if (parentNode) {
+          setNavStack(prev => prev.slice(0, -1))
+          setSelectedNode(null)
+        }
+        return
+      }
+
+      if (e.key === 'Enter' && selectedNode) {
+        handleNodeDoubleClick(selectedNode)
+        return
+      }
+    }
+
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [searchOpen, selectedNode, parentNode, handleNodeDoubleClick])
 
   const showBack = navStack.length > 1
 
