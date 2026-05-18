@@ -89,6 +89,8 @@ function StarField() {
 
 function KeyboardLegend() {
   const [open, setOpen] = useState(false)
+  const [panelPos, setPanelPos] = useState({ x: 0, y: 0 })
+  const btnRef = useRef(null)
   const shortcuts = [
     ['⌘K',        'Search nodes'],
     ['Enter',     'Open selected'],
@@ -96,10 +98,24 @@ function KeyboardLegend() {
     ['Esc',       'Close / deselect'],
     ['Scroll',    'Zoom in / out'],
   ]
+
+  const handleToggle = () => {
+    if (!open && btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect()
+      const panelH = 180
+      const panelW = 230
+      const x = Math.max(8, Math.min(rect.left, window.innerWidth - panelW - 8))
+      const y = Math.max(8, rect.top - panelH - 8)
+      setPanelPos({ x, y })
+    }
+    setOpen(v => !v)
+  }
+
   return (
     <div style={{ position: 'fixed', bottom: 56, left: 20, zIndex: 90 }}>
       <button
-        onClick={() => setOpen(v => !v)}
+        ref={btnRef}
+        onClick={handleToggle}
         style={{
           background: 'rgba(8,8,22,0.75)',
           border: '1px solid rgba(124,157,245,0.2)',
@@ -124,7 +140,9 @@ function KeyboardLegend() {
 
       {open && (
         <div style={{
-          position: 'absolute', bottom: 28, left: 0,
+          position: 'fixed',
+          left: panelPos.x,
+          top: panelPos.y,
           background: 'rgba(6,6,18,0.97)',
           border: '1px solid rgba(124,157,245,0.18)',
           borderRadius: 10,
@@ -449,9 +467,15 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
               selectedNodeId={selectedNode?.id}
               onNodeClick={handleNodeClick}
               onNodeDoubleClick={handleNodeDoubleClick}
-              onNodeContextMenu={(node, e) =>
-                setContextMenu({ node, x: e.clientX, y: e.clientY })
-              }
+              onNodeContextMenu={(node, e) => {
+                const MENU_W = 180
+                const MENU_H = 160
+                setContextMenu({
+                  node,
+                  x: Math.max(8, Math.min(e.clientX, window.innerWidth  - MENU_W - 8)),
+                  y: Math.max(8, Math.min(e.clientY, window.innerHeight - MENU_H - 8)),
+                })
+              }}
               onPointerEnter={(node, e) => setTooltip({ node, x: e.clientX, y: e.clientY })}
               onPointerMove={(node, e) => setTooltip({ node, x: e.clientX, y: e.clientY })}
               onPointerLeave={() => setTooltip({ node: null, x: 0, y: 0 })}
