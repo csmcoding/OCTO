@@ -399,6 +399,51 @@ async def get_config():
     }
 
 
+@app.get("/api/preview")
+async def api_preview_file(path: str, lines: int = 20):
+    """Return first N lines of a file as a single content string for panel preview."""
+    p = Path(path)
+    if not p.exists() or not p.is_file():
+        return JSONResponse({"detail": "File not found"}, status_code=404)
+    if p.stat().st_size > 10 * 1024 * 1024:
+        return {"content": "# File too large to preview", "truncated": True, "total_lines": 0, "language": "text"}
+    try:
+        all_lines = p.read_text(errors="replace").splitlines(keepends=True)
+        truncated = len(all_lines) > lines
+        content = "".join(all_lines[:lines])
+        return {
+            "content": content,
+            "truncated": truncated,
+            "total_lines": len(all_lines),
+            "language": _detect_language(p.suffix),
+        }
+    except Exception as e:
+        return JSONResponse({"detail": str(e)}, status_code=500)
+
+
+@app.get("/api/open")
+async def api_open_in_editor(path: str):
+    """Open a file or folder in the system default editor."""
+    p = Path(path)
+    if not p.exists():
+        return JSONResponse({"detail": "Not found"}, status_code=404)
+    try:
+        for cmd in [["code", str(p)], ["open", str(p)], ["xdg-open", str(p)]]:
+            try:
+                subprocess.Popen(
+                    cmd,
+                    env=os.environ.copy(),
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return {"ok": True}
+            except FileNotFoundError:
+                continue
+        return {"ok": False, "reason": "No editor found"}
+    except Exception as e:
+        return {"ok": False, "reason": str(e)}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.api:app", host="0.0.0.0", port=config.API_PORT)

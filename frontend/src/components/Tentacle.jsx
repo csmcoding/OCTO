@@ -71,11 +71,11 @@ function Tentacle({
   return (
     <mesh ref={meshRef} geometry={initGeo}>
       <meshStandardMaterial
-        color="#030308"
+        color="#0d1320"
         emissive={color}
-        emissiveIntensity={0.08}
+        emissiveIntensity={hovered ? 0.14 : 0.10}
         transparent
-        opacity={hovered ? 0.85 : 0.45}
+        opacity={hovered ? 0.88 : 0.58}
         roughness={0.6}
         metalness={0.1}
       />
