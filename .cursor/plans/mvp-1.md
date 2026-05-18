@@ -589,3 +589,26 @@ ThreeScene.jsx updates:
 - All components: #4A90D9/rgba(74,144,217,...) → #7c9df5/rgba(124,157,245,...) throughout
 - CSS: full reset with :root custom properties, Outfit @import, selection/scrollbar tokens
 - Next: PROMPT 20 — entrance animations search overlay, or further feature work
+
+---
+
+## PROMPT 20 HANDOFF — Bug Fixes, Zoom, Depth, UI Polish
+- Status: COMPLETE
+- Verified: 44 frontend tests pass, 25 backend tests pass, build clean (0 errors)
+- Fixed: getNodeColor all-red bug — root cause was dominantSignal='dormant' on most folders
+  (Linux dir mtime is old since it only updates on direct-child add/remove, not deep file edits).
+  Fix: ALERT_SIGNALS = Set(['gitDirty','gitUnpushed']); only these two change node color to red.
+  noReadme/dormant/recentlyModified remain informational — they still show the ! badge but keep
+  the node's type color (violet for folder, teal for file).
+- Fixed: scroll-to-zoom — CameraRig gets zoomRef (range 0.45×–3.5×) + passive-false wheel event.
+  Camera baseR and height both scale by zoomRef.current.
+- Fixed: FOV 62° (was 52°), radius 3.8–6.0 (was 4.5–7.5), aspect-ratio correction removed.
+- Added: StarField — 280 random points on sphere r=30–50, subtle #8888cc at 0.4 opacity.
+- Added: Grid from @react-three/drei at y=-6 with fadeDistance=20 for spatial grounding.
+- Added: ZoomHint HUD — appears at bottom-right for 3.5s then fades out via fadeOut keyframe.
+- Added: Node size encodes data — folders scale 0.30–0.55 by childCount, files 0.22–0.45 by size.
+  Signal nodes get +15% radius bump instead of scale prop.
+- Redesigned: Panel — border-top replaces border-left, Outfit 15px title, blur(20px) saturate(180%).
+- Polished: Breadcrumb — bg rgba(8,8,20,0.75), blur(12px), separator rgba opacity.
+- Added: @keyframes fadeOut to index.css.
+- Next: PROMPT 21 — further features or polish
