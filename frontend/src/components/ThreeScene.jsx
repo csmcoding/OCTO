@@ -21,6 +21,9 @@ import NodeContextMenu from './NodeContextMenu'
 import Minimap from './Minimap'
 import PinTray from './PinTray'
 import SettingsPanel from './SettingsPanel'
+import ActivityLegend from './ActivityLegend'
+import { loadActivity } from '../utils/loadActivity'
+import { getNodeActivity, aggregateFolderActivity, getActivityLevel, computeActivitySummary } from '../utils/activityAggregate'
 
 function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
   const { camera, size } = useThree()
@@ -312,6 +315,7 @@ function SceneObjects({
   onHoverPosition,
   hoveredId, onHoveredChange, onLayoutReady, onCapInfo,
   showLabels, sway, colorTheme,
+  activityMode, activityIndex,
 }) {
   const children = currentRoot?.children ?? []
   const isCapped = children.length > SCENE_NODE_CAP
@@ -407,6 +411,12 @@ function SceneObjects({
         const isHovered = hoveredId === node.id
         const color = getNodeColor(node)
         const delay = i * 0.045
+        const activityItem = activityMode && activityIndex
+          ? (node.type === 'folder'
+              ? aggregateFolderActivity(node, activityIndex)
+              : (activityIndex[node.path] ?? null))
+          : null
+        const activityLevel = activityItem ? getActivityLevel(activityItem) : null
         return (
           <group key={node.id}>
             <Tentacle
@@ -429,6 +439,9 @@ function SceneObjects({
               isSelected={selectedNodeId === node.id}
               showLabel={showLabels && hoveredId !== node.id}
               index={i}
+              activityMode={activityMode}
+              activityLevel={activityLevel}
+              isActivityDirty={activityItem?.isDirty ?? false}
               onPointerEnter={(n, e) => {
                 onHoveredChange(node.id)
                 onHoverPosition?.(endPosition)
@@ -475,12 +488,14 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
   const [hoveredId, setHoveredId] = useState(null)
   const [pins, setPins] = useState([])
   const [settings, setSettings] = useState({
-    autoRotate: true,
-    showLabels: true,
-    sway:       true,
-    scanDepth:  2,
-    colorTheme: 'dark',
+    autoRotate:   true,
+    showLabels:   true,
+    sway:         true,
+    scanDepth:    2,
+    colorTheme:   'dark',
+    activityMode: false,
   })
+  const [activityData, setActivityData] = useState(null)
   const [shareCopied, setShareCopied] = useState(false)
   const [capInfo, setCapInfo] = useState(null)
   const [cameraPos, setCameraPos] = useState(null)
@@ -488,6 +503,8 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
   const setSetting = (key, value) => setSettings(prev => ({ ...prev, [key]: value }))
   const scanDepthRef = useRef(2)
   scanDepthRef.current = settings.scanDepth
+  const activityModeRef = useRef(false)
+  activityModeRef.current = settings.activityMode
   const originalRootRef = useRef(null)
   const navStackRef = useRef([])
   navStackRef.current = navStack
@@ -523,6 +540,23 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
   useEffect(() => {
     if (currentRoot) setRevealKey(k => k + 1)
   }, [currentRoot])
+
+  // Load activity data when mode is on or root changes while mode is on
+  useEffect(() => {
+    if (!settings.activityMode || !currentRoot?.path) return
+    if (activityData?.root === currentRoot.path) return  // already loaded
+    loadActivity(currentRoot.path)
+      .then(data => setActivityData(data))
+      .catch(err => {
+        console.warn('[octo] activity load failed', err)
+        setActivityData({ byPath: {}, unavailable: 'fetch_error', root: currentRoot.path })
+      })
+  }, [settings.activityMode, currentRoot?.path, activityData?.root])
+
+  // Reset activity data when root changes
+  useEffect(() => {
+    setActivityData(null)
+  }, [currentRoot?.path])
 
   useEffect(() => {
     if (!navStack.length) return
@@ -610,6 +644,21 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
     setCameraPos({ x, y, z })
   }, [])
 
+  // Activity data for the selected node (file or aggregated folder)
+  const selectedActivityItem = useMemo(() => {
+    if (!settings.activityMode || !activityData?.byPath || !selectedNode) return null
+    return selectedNode.type === 'folder'
+      ? aggregateFolderActivity(selectedNode, activityData.byPath)
+      : getNodeActivity(selectedNode, activityData.byPath)
+  }, [settings.activityMode, activityData, selectedNode])
+
+  // Scene-wide summary line
+  const activitySummary = useMemo(() => {
+    if (!settings.activityMode || !activityData?.byPath) return null
+    const nodes = layout.map(e => e.node)
+    return computeActivitySummary(nodes, activityData.byPath)
+  }, [settings.activityMode, activityData, layout])
+
   const handlePin = useCallback((node) => {
     setPins(prev => prev.some(p => p.id === node.id) ? prev : [...prev, node])
   }, [])
@@ -652,6 +701,11 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
 
       if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey) {
         handleRescan()
+        return
+      }
+
+      if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey) {
+        setSetting('activityMode', !activityModeRef.current)
         return
       }
 
@@ -731,6 +785,8 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
               showLabels={settings.showLabels}
               sway={settings.sway}
               colorTheme={settings.colorTheme}
+              activityMode={settings.activityMode}
+              activityIndex={activityData?.byPath ?? null}
             />
           )}
         </Canvas>
@@ -849,6 +905,12 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         />
       )}
       <KeyboardLegend />
+      {settings.activityMode && (
+        <ActivityLegend
+          summary={activitySummary}
+          unavailable={activityData?.unavailable ?? null}
+        />
+      )}
       <Minimap
         nodes={layout}
         selectedNodeId={selectedNode?.id}
@@ -873,6 +935,8 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           onExport={() => { const md = exportMarkdown({ currentRoot, navStack, pins }); downloadMarkdown(md) }}
           depth={navStack.length}
           rootPath={currentRoot?.path}
+          activityMode={settings.activityMode}
+          activityItem={selectedActivityItem}
         />
       )}
       {showBack && (

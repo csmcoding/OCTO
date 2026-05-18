@@ -1,0 +1,159 @@
+import { describe, it, expect } from 'vitest'
+import {
+  indexActivityByPath,
+  getNodeActivity,
+  aggregateFolderActivity,
+  getActivityLevel,
+  computeActivitySummary,
+} from '../utils/activityAggregate.js'
+
+// ── helpers ─────────────────────────────────────────────────────────────────
+
+const file   = (name, path) => ({ id: path, name, path, type: 'file',   signals: {}, children: [] })
+const folder = (name, path, children = []) => ({ id: path, name, path, type: 'folder', signals: {}, children })
+
+const activity = (path, opts = {}) => ({
+  path,
+  relPath:           path,
+  commitCount30d:    opts.commitCount30d ?? 0,
+  commitCount7d:     opts.commitCount7d  ?? 0,
+  isDirty:           opts.isDirty        ?? false,
+  lastCommitAt:      opts.lastCommitAt   ?? null,
+  lastCommitSha:     null,
+  lastCommitMessage: null,
+  author:            null,
+})
+
+// ── indexActivityByPath ──────────────────────────────────────────────────────
+
+describe('indexActivityByPath', () => {
+  // 1
+  it('indexes items by path', () => {
+    const items = [activity('/a/b.js'), activity('/a/c.js')]
+    const index = indexActivityByPath(items)
+    expect(index['/a/b.js']).toBeDefined()
+    expect(index['/a/c.js']).toBeDefined()
+    expect(Object.keys(index)).toHaveLength(2)
+  })
+
+  it('returns empty object for empty array', () => {
+    expect(indexActivityByPath([])).toEqual({})
+  })
+})
+
+// ── getNodeActivity ──────────────────────────────────────────────────────────
+
+describe('getNodeActivity', () => {
+  // 2
+  it('file node resolves direct activity', () => {
+    const index = { '/a/b.js': activity('/a/b.js', { commitCount7d: 3 }) }
+    const result = getNodeActivity(file('b.js', '/a/b.js'), index)
+    expect(result.commitCount7d).toBe(3)
+  })
+
+  it('returns null for unknown path', () => {
+    expect(getNodeActivity(file('x.js', '/x.js'), {})).toBeNull()
+  })
+})
+
+// ── aggregateFolderActivity ──────────────────────────────────────────────────
+
+describe('aggregateFolderActivity', () => {
+  // 3
+  it('sums commitCounts from descendant files', () => {
+    const parent = folder('root', '/root', [
+      file('a.js', '/root/a.js'),
+      file('b.js', '/root/b.js'),
+    ])
+    const index = {
+      '/root/a.js': activity('/root/a.js', { commitCount30d: 3, commitCount7d: 1 }),
+      '/root/b.js': activity('/root/b.js', { commitCount30d: 2, commitCount7d: 2 }),
+    }
+    const result = aggregateFolderActivity(parent, index)
+    expect(result.commitCount30d).toBe(5)
+    expect(result.commitCount7d).toBe(3)
+  })
+
+  // 4
+  it('dirty descendant marks folder dirty', () => {
+    const parent = folder('root', '/root', [file('dirty.js', '/root/dirty.js')])
+    const index  = { '/root/dirty.js': activity('/root/dirty.js', { isDirty: true }) }
+    expect(aggregateFolderActivity(parent, index).isDirty).toBe(true)
+  })
+
+  it('returns null when no descendants have activity data', () => {
+    const parent = folder('empty', '/empty', [file('x.js', '/empty/x.js')])
+    expect(aggregateFolderActivity(parent, {})).toBeNull()
+  })
+
+  it('picks most recent lastCommitAt across descendants', () => {
+    const recent = new Date(Date.now() - 3600000).toISOString()
+    const older  = new Date(Date.now() - 86400000).toISOString()
+    const parent = folder('r', '/r', [file('a.js', '/r/a.js'), file('b.js', '/r/b.js')])
+    const index  = {
+      '/r/a.js': activity('/r/a.js', { lastCommitAt: older }),
+      '/r/b.js': activity('/r/b.js', { lastCommitAt: recent }),
+    }
+    const result = aggregateFolderActivity(parent, index)
+    expect(result.lastCommitAt).toBe(recent)
+  })
+})
+
+// ── getActivityLevel ─────────────────────────────────────────────────────────
+
+describe('getActivityLevel', () => {
+  // 5 (part of summarizeActivity spec, tested here)
+  it('returns null for null item', () => {
+    expect(getActivityLevel(null)).toBeNull()
+  })
+
+  it('returns hot for commit within 24h', () => {
+    const recent = new Date(Date.now() - 3 * 3600000).toISOString()
+    expect(getActivityLevel({ lastCommitAt: recent })).toBe('hot')
+  })
+
+  it('returns warm for commit 2–6 days ago', () => {
+    const threedays = new Date(Date.now() - 3 * 86400000).toISOString()
+    expect(getActivityLevel({ lastCommitAt: threedays })).toBe('warm')
+  })
+
+  it('returns cool for commit 8–29 days ago', () => {
+    const twoweeks = new Date(Date.now() - 14 * 86400000).toISOString()
+    expect(getActivityLevel({ lastCommitAt: twoweeks })).toBe('cool')
+  })
+
+  it('returns stale for null lastCommitAt', () => {
+    expect(getActivityLevel({ lastCommitAt: null })).toBe('stale')
+  })
+
+  it('returns stale for commit older than 30d', () => {
+    const old = new Date(Date.now() - 45 * 86400000).toISOString()
+    expect(getActivityLevel({ lastCommitAt: old })).toBe('stale')
+  })
+})
+
+// ── computeActivitySummary ───────────────────────────────────────────────────
+
+describe('computeActivitySummary', () => {
+  // 6 (scene summary counts)
+  it('counts active-week + dirty + tracked from visible nodes', () => {
+    const nodes = [
+      file('a.js', '/a.js'),
+      file('b.js', '/b.js'),
+      file('c.js', '/c.js'),
+    ]
+    const index = {
+      '/a.js': activity('/a.js', { commitCount7d: 2, isDirty: true }),
+      '/b.js': activity('/b.js', { commitCount7d: 0 }),
+      // c.js not in index — not tracked
+    }
+    const summary = computeActivitySummary(nodes, index)
+    expect(summary).toContain('1 active this week')
+    expect(summary).toContain('1 dirty')
+    expect(summary).toContain('2 tracked')
+  })
+
+  it('returns null when nothing is tracked', () => {
+    expect(computeActivitySummary([file('x.js', '/x.js')], {})).toBeNull()
+  })
+})

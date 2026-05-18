@@ -949,3 +949,45 @@ shortcut `useEffect`. No logic changes — pure reorder.
 - Tests: projectMinimap.test.js (8), minimap.test.js (8) = 16 new
 - All 126 frontend tests green, build clean (0 errors)
 - Next: PROMPT 33 (TBD)
+
+## PROMPT 33 HANDOFF — Timeline / Activity Mode + Git History Overlays
+- Status: COMPLETE
+- Added /api/activity endpoint to backend/api.py:
+  - Runs `git log --since=31.days --name-only --relative` via subprocess
+  - Builds per-file: commitCount30d, commitCount7d, lastCommitAt, sha, msg, author, isDirty
+  - Returns unavailable:"not_git_repo" if path is not a git repo
+  - Resilient: catches subprocess exceptions, returns partial data on failure
+- Added activityAggregate.js:
+  - indexActivityByPath(items) → path-keyed map
+  - getNodeActivity(node, index) → file lookup
+  - aggregateFolderActivity(node, index) → recursive child roll-up
+  - getActivityLevel(item) → 'hot'|'warm'|'cool'|'stale'|null
+  - computeActivitySummary(nodes, index) → scene banner string
+- Added loadActivity.js:
+  - loadActivity(rootPath) → fetch + processActivityResponse()
+  - processActivityResponse(data) → { byPath, unavailable, root, generatedAt }
+  - summarizeActivity(item) → concise label (edited today, dirty + active, stale, etc.)
+- Added ActivityLegend.jsx: compact pill stack (bottom: 210, left: 20, z-index 82)
+  - Shows legend items with color dots + labels
+  - Shows summary line above legend
+  - Shows "requires git repository" notice when unavailable
+- Updated NodeMesh.jsx: ActivityAura component (ring at inner 0.86, outer 1.08)
+  - hot: amber-orange pulse; warm: golden; cool: teal; dirty: amber
+  - Renders only when activityMode=true and level != stale
+- Updated Panel.jsx:
+  - Added buildActivityDisplay() export for testing
+  - Added ActivitySection with summary chip, commit metadata rows, ActivityStrip
+  - Activity strip: 4 buckets (30d, 7d, today, dirty) as proportional bar chart
+  - Shows "No git activity available" fallback when activityMode=true and no data
+- Updated SettingsPanel.jsx: Activity Mode toggle + reset resets to false
+- Updated ThreeScene.jsx:
+  - activityMode in settings (default false), activityData state
+  - T hotkey toggles activityMode via activityModeRef
+  - loadActivity called when mode enabled, resetted on root change
+  - selectedActivityItem useMemo → passed to Panel
+  - activitySummary useMemo → passed to ActivityLegend
+  - SceneObjects receives activityMode + activityIndex, computes per-node activity
+- Tests: backend test_activity.py (7), activityAggregate.test.js (14),
+  loadActivity.test.js (9), panel additions (3) = 33 new tests total
+- All 154 frontend + 54 backend tests green, build clean
+- Next: PROMPT 34 — semantic clustering / architecture mode

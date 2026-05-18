@@ -82,6 +82,51 @@ function SignalAura({ color, index }) {
   )
 }
 
+// ── Activity aura ring ──────────────────────────────────────────────────────
+// Rendered at a larger radius than SignalAura so they never overlap.
+// level: 'hot' | 'warm' | 'cool' | null   isDirty: boolean
+function ActivityAura({ level, isDirty, index }) {
+  const meshRef = useRef()
+  const color = isDirty   ? '#e8a020'
+    : level === 'hot'     ? '#ff6b35'
+    : level === 'warm'    ? '#c8a020'
+    : level === 'cool'    ? '#4a9090'
+    : '#444466'
+
+  const baseOpacity = isDirty   ? 0.32
+    : level === 'hot'  ? 0.28
+    : level === 'warm' ? 0.16
+    : level === 'cool' ? 0.08
+    : 0.03
+
+  const doPulse = isDirty || level === 'hot'
+
+  useFrame(({ clock }) => {
+    if (!meshRef.current) return
+    const t = clock.getElapsedTime()
+    meshRef.current.material.opacity = doPulse
+      ? baseOpacity * (0.55 + 0.45 * Math.sin(t * 2.1 + index * 0.7))
+      : baseOpacity
+    if (doPulse) {
+      meshRef.current.scale.setScalar(1.0 + 0.06 * Math.sin(t * 1.6 + index * 0.5))
+    }
+  })
+
+  return (
+    <mesh ref={meshRef}>
+      <ringGeometry args={[0.86, 1.08, 48]} />
+      <meshBasicMaterial
+        color={color}
+        transparent
+        opacity={baseOpacity}
+        blending={AdditiveBlending}
+        depthWrite={false}
+        side={2}
+      />
+    </mesh>
+  )
+}
+
 function NodeMesh({
   node, position,
   onClick, onDoubleClick, onContextMenu,
@@ -90,6 +135,9 @@ function NodeMesh({
   isSelected = false,
   showLabel = true,
   index = 0,
+  activityMode = false,
+  activityLevel = null,
+  isActivityDirty = false,
 }) {
   const [isHovered, setIsHovered] = useState(false)
   const activeSignals = getActiveSignals(node)
@@ -150,6 +198,9 @@ function NodeMesh({
       </mesh>
 
       {hasSignals && <SignalAura color={auraColor} index={index} />}
+      {activityMode && (activityLevel || isActivityDirty) && activityLevel !== 'stale' && (
+        <ActivityAura level={activityLevel} isDirty={isActivityDirty} index={index} />
+      )}
 
       {hasSignals && (
         <Text position={[0, 0.6, 0]} fontSize={0.25} color={nodeColor} depthOffset={-1}>

@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, afterEach } from 'vitest'
-import { detectLang, buildTypeBadge, buildMetrics, buildActions } from '../components/Panel.jsx'
+import { detectLang, buildTypeBadge, buildMetrics, buildActions, buildActivityDisplay } from '../components/Panel.jsx'
 import { getActiveSignals } from '../utils/signals.js'
 
 afterEach(() => vi.restoreAllMocks())
@@ -135,5 +135,44 @@ describe('detectLang', () => {
     expect(detectLang('config.yaml')).toBe('yaml')
     expect(detectLang('styles.css')).toBe('css')
     expect(detectLang('unknown.xyz')).toBe('text')
+  })
+})
+
+// ── activity display ─────────────────────────────────────────────────────────
+
+describe('Panel — buildActivityDisplay', () => {
+  // 8. returns unavailable=false when activityItem is null
+  it('returns available:false for null activityItem', () => {
+    const display = buildActivityDisplay(null)
+    expect(display.available).toBe(false)
+  })
+
+  // 9. returns commit metadata when activityItem is present
+  it('returns metadata when activityItem is present', () => {
+    const recent = new Date().toISOString()
+    const item = {
+      lastCommitAt:      recent,
+      lastCommitSha:     'abc1234',
+      lastCommitMessage: 'fix search ranking',
+      author:            'dev@example.com',
+      commitCount7d:     2,
+      commitCount30d:    5,
+      isDirty:           false,
+    }
+    const display = buildActivityDisplay(item)
+    expect(display.available).toBe(true)
+    expect(display.lastCommitSha).toBe('abc1234')
+    expect(display.lastCommitMessage).toBe('fix search ranking')
+    expect(display.commitCount7d).toBe(2)
+    expect(display.commitCount30d).toBe(5)
+    expect(display.isDirty).toBe(false)
+  })
+
+  it('includes summary string', () => {
+    const recent = new Date().toISOString()
+    const item = { lastCommitAt: recent, commitCount7d: 1, commitCount30d: 2, isDirty: false }
+    const display = buildActivityDisplay(item)
+    expect(typeof display.summary).toBe('string')
+    expect(display.summary.length).toBeGreaterThan(0)
   })
 })

@@ -3,6 +3,8 @@ import { getActiveSignals, SIGNAL_COLORS, SIGNAL_LABELS } from '../utils/signals
 import { getNodeColor } from '../utils/palette'
 import { openNode } from '../utils/loadTree'
 import { useGitDiff } from '../hooks/useGitDiff'
+import { summarizeActivity } from '../utils/loadActivity'
+import { getActivityLevel } from '../utils/activityAggregate'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
@@ -312,6 +314,153 @@ function openStatusLabel(status, defaultLabel) {
   return                           { text: '✗ failed',  color: '#ff4466' }
 }
 
+// ── Activity section helpers ─────────────────────────────────────────────────
+
+/**
+ * Build a display object for the activity section.
+ * Export allows direct testing without rendering.
+ */
+export function buildActivityDisplay(activityItem) {
+  if (!activityItem) return { available: false }
+  return {
+    available:         true,
+    summary:           summarizeActivity(activityItem),
+    level:             getActivityLevel(activityItem),
+    lastCommitAt:      activityItem.lastCommitAt,
+    lastCommitSha:     activityItem.lastCommitSha,
+    lastCommitMessage: activityItem.lastCommitMessage,
+    author:            activityItem.author,
+    commitCount7d:     activityItem.commitCount7d  ?? 0,
+    commitCount30d:    activityItem.commitCount30d ?? 0,
+    isDirty:           Boolean(activityItem.isDirty),
+  }
+}
+
+function formatAgeDays(isoString) {
+  if (!isoString) return null
+  const ageDays = (Date.now() - new Date(isoString).getTime()) / 86400000
+  if (ageDays < 0.042) return 'just now'
+  if (ageDays < 1)     return `${Math.round(ageDays * 24)}h ago`
+  if (ageDays < 7)     return `${Math.floor(ageDays)}d ago`
+  if (ageDays < 30)    return `${Math.floor(ageDays / 7)}w ago`
+  return `${Math.floor(ageDays / 30)}mo ago`
+}
+
+const LEVEL_COLORS = {
+  hot:   '#ff6b35',
+  warm:  '#c8a020',
+  cool:  '#4a9090',
+  stale: '#555570',
+}
+
+function ActivityStrip({ display }) {
+  const { commitCount7d, commitCount30d, level, isDirty } = display
+  const buckets = [
+    { label: '30d', value: commitCount30d, color: '#4a80cc' },
+    { label: '7d',  value: commitCount7d,  color: '#4ecdc4' },
+    { label: 'hot', value: level === 'hot'  ? 1 : 0, color: '#ff6b35' },
+    { label: 'dirty', value: isDirty ? 1 : 0, color: '#e8a020' },
+  ]
+  const max = Math.max(...buckets.map(b => b.value), 1)
+  return (
+    <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
+      {buckets.map(b => (
+        <div key={b.label} style={{ flex: 1 }}>
+          <div style={{
+            height: 24, background: 'rgba(0,0,0,0.35)',
+            borderRadius: 3, overflow: 'hidden', position: 'relative',
+          }}>
+            <div style={{
+              position: 'absolute', bottom: 0, left: 0, right: 0,
+              height: `${(b.value / max) * 100}%`,
+              background: b.color + '88',
+              transition: 'height 0.4s ease',
+            }} />
+          </div>
+          <div style={{
+            fontFamily: MONO, fontSize: 8,
+            color: 'rgba(120,120,175,0.5)',
+            textAlign: 'center', marginTop: 2,
+          }}>{b.label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ActivityMetaRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', gap: 6, marginBottom: 3, lineHeight: 1.4 }}>
+      <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(110,110,158,0.55)', minWidth: 66, flexShrink: 0 }}>
+        {label}
+      </span>
+      <span style={{
+        fontFamily: MONO, fontSize: 9, color: 'rgba(190,195,230,0.75)',
+        wordBreak: 'break-all', overflow: 'hidden',
+        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+      }}>
+        {String(value)}
+      </span>
+    </div>
+  )
+}
+
+function ActivitySection({ activityItem, activityMode }) {
+  if (!activityMode) return null
+  const display = buildActivityDisplay(activityItem)
+
+  const levelColor = display.level ? (LEVEL_COLORS[display.level] ?? '#888') : '#888'
+  const summaryBg  = display.level ? `${levelColor}22` : 'rgba(80,80,120,0.12)'
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{
+        fontFamily: MONO, fontSize: 9,
+        color: 'rgba(120,120,175,0.55)',
+        letterSpacing: '0.1em', textTransform: 'uppercase',
+        marginBottom: 8,
+      }}>
+        Activity
+      </div>
+
+      {!display.available ? (
+        <span style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(120,120,175,0.4)' }}>
+          No git activity available
+        </span>
+      ) : (
+        <>
+          {/* Summary chip */}
+          <div style={{
+            display: 'inline-block',
+            fontFamily: MONO, fontSize: 10,
+            color: levelColor,
+            background: summaryBg,
+            border: `1px solid ${levelColor}44`,
+            borderRadius: 4, padding: '2px 7px', marginBottom: 10,
+          }}>
+            {display.summary}
+          </div>
+
+          {/* Commit metadata */}
+          {display.lastCommitAt && (
+            <div>
+              <ActivityMetaRow label="last commit"  value={formatAgeDays(display.lastCommitAt)} />
+              {display.author            && <ActivityMetaRow label="author"      value={display.author} />}
+              {display.lastCommitSha     && <ActivityMetaRow label="sha"         value={display.lastCommitSha} />}
+              {display.lastCommitMessage && <ActivityMetaRow label="message"     value={display.lastCommitMessage} />}
+              <ActivityMetaRow label="7d commits"  value={display.commitCount7d} />
+              <ActivityMetaRow label="30d commits" value={display.commitCount30d} />
+              {display.isDirty && <ActivityMetaRow label="status" value="dirty — unstaged changes" />}
+            </div>
+          )}
+
+          <ActivityStrip display={display} />
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function Panel({
   node,
   onClose,
@@ -323,6 +472,8 @@ export default function Panel({
   onExport,
   depth = 0,
   rootPath,
+  activityMode = false,
+  activityItem = null,
 }) {
   const [mounted, setMounted]     = useState(false)
   const [openStatus, setOpenStatus] = useState({})
@@ -470,6 +621,14 @@ export default function Panel({
       {/* Git diff (retained — useful for nodes with git signals) */}
       {(activeSignals.includes('gitDirty') || activeSignals.includes('gitUnpushed')) && (
         <GitDiffSection gitDiff={gitDiff} />
+      )}
+
+      {/* ── SECTION 4b: ACTIVITY ────────────────────────── */}
+      {activityMode && (
+        <>
+          <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '16px 0 12px' }} />
+          <ActivitySection activityItem={activityItem} activityMode={activityMode} />
+        </>
       )}
 
       <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '16px 0 12px' }} />
