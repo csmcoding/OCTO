@@ -22,6 +22,7 @@ export default function NodeMesh({
   onPointerEnter, onPointerMove, onPointerLeave,
   revealProgress = 1, delay = 0,
   isSelected = false,
+  showLabel = true,
 }) {
   const [isHovered, setIsHovered] = useState(false)
   const activeSignals = getActiveSignals(node)
@@ -83,7 +84,7 @@ export default function NodeMesh({
         </mesh>
       )}
 
-      <Html
+      {showLabel && <Html
         position={[0, -0.62, 0]}
         center
         distanceFactor={8}
@@ -106,7 +107,7 @@ export default function NodeMesh({
         }}>
           {node.name}
         </div>
-      </Html>
+      </Html>}
     </group>
   )
 }

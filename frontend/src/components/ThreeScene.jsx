@@ -87,6 +87,79 @@ function StarField() {
   )
 }
 
+function KeyboardLegend() {
+  const [open, setOpen] = useState(false)
+  const shortcuts = [
+    ['⌘K',        'Search nodes'],
+    ['Enter',     'Open selected'],
+    ['Backspace', 'Go up one level'],
+    ['Esc',       'Close / deselect'],
+    ['Scroll',    'Zoom in / out'],
+  ]
+  return (
+    <div style={{ position: 'fixed', bottom: 56, left: 20, zIndex: 90 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        style={{
+          background: 'rgba(8,8,22,0.75)',
+          border: '1px solid rgba(124,157,245,0.2)',
+          borderRadius: '50%',
+          width: 22, height: 22,
+          color: 'rgba(110,110,158,0.7)',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 11, cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'border-color 0.15s, color 0.15s',
+          backdropFilter: 'blur(8px)',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)'
+          e.currentTarget.style.color = '#e2e2f2'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.2)'
+          e.currentTarget.style.color = 'rgba(110,110,158,0.7)'
+        }}
+      >?</button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', bottom: 28, left: 0,
+          background: 'rgba(6,6,18,0.97)',
+          border: '1px solid rgba(124,157,245,0.18)',
+          borderRadius: 10,
+          backdropFilter: 'blur(16px)',
+          padding: '10px 14px',
+          minWidth: 200,
+          animation: 'fadeIn 0.15s ease',
+          zIndex: 91,
+        }}>
+          {shortcuts.map(([key, label]) => (
+            <div key={key} style={{
+              display: 'flex', justifyContent: 'space-between',
+              alignItems: 'center', gap: 16, padding: '3px 0',
+            }}>
+              <kbd style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10, color: '#7c9df5',
+                background: 'rgba(124,157,245,0.1)',
+                border: '1px solid rgba(124,157,245,0.22)',
+                borderRadius: 4, padding: '1px 6px',
+                whiteSpace: 'nowrap',
+              }}>{key}</kbd>
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10, color: 'rgba(200,200,230,0.7)',
+                textAlign: 'right',
+              }}>{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ZoomHint() {
   const [visible, setVisible] = useState(true)
   useEffect(() => {
@@ -208,6 +281,7 @@ function SceneObjects({
               revealProgress={revealProgress}
               delay={delay}
               isSelected={selectedNodeId === node.id}
+              showLabel={hoveredId !== node.id}
               onPointerEnter={(n, e) => {
                 setHoveredId(node.id)
                 onHoverPosition?.(endPosition)
@@ -267,14 +341,37 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setSearchOpen(true)
+        setSearchOpen(v => !v)
+        return
+      }
+
+      if (e.key === 'Escape') {
+        if (searchOpen) { setSearchOpen(false); return }
+        if (selectedNode) { setSelectedNode(null); return }
+        return
+      }
+
+      if ((e.key === 'Backspace' || e.key === 'ArrowLeft') && !e.metaKey && !e.ctrlKey) {
+        if (parentNode) {
+          setNavStack(prev => prev.slice(0, -1))
+          setSelectedNode(null)
+        }
+        return
+      }
+
+      if (e.key === 'Enter' && selectedNode) {
+        handleNodeDoubleClick(selectedNode)
+        return
       }
     }
+
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
+  }, [searchOpen, selectedNode, parentNode, handleNodeDoubleClick])
 
   const [revealKey, setRevealKey] = useState(0)
   useEffect(() => {
@@ -364,7 +461,8 @@ export default function ThreeScene({ treeData, onLoadingChange }) {
         </Canvas>
       </div>
       <ZoomHint />
-      <NodeTooltip node={tooltip.node} position={{ x: tooltip.x, y: tooltip.y }} />
+      <KeyboardLegend />
+      <NodeTooltip node={tooltip.node} x={tooltip.x} y={tooltip.y} />
       {selectedNode && (
         <Panel node={selectedNode} onClose={() => setSelectedNode(null)} />
       )}

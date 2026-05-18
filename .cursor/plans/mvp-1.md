@@ -612,3 +612,24 @@ ThreeScene.jsx updates:
 - Polished: Breadcrumb — bg rgba(8,8,20,0.75), blur(12px), separator rgba opacity.
 - Added: @keyframes fadeOut to index.css.
 - Next: PROMPT 21 — further features or polish
+
+---
+
+## PROMPT 21 HANDOFF — Keyboard Shortcuts + Tooltip + Label Hide
+- Status: COMPLETE
+- Verified: 47 frontend tests pass (3 new), 25 backend tests pass, build clean
+- New: Comprehensive keydown handler — ⌘K toggles search, Esc closes search then panel,
+  Backspace/← navigates up one level when parentNode exists, Enter drills into/opens selected node.
+  Handler guards against INPUT/TEXTAREA targets; deps array: [searchOpen, selectedNode, parentNode, handleNodeDoubleClick]
+- New: KeyboardLegend "?" button fixed bottom-left. Circular pill, toggle on click, overlay
+  lists all shortcuts as <kbd> chips. Positioned at bottom:56 left:20.
+- New: NodeTooltip redesigned — accepts {node, x, y} props, left border = node type color,
+  shows type icon (⬡/◈), node name, active signal labels (up to 3), child count for folders,
+  "not loaded" for lazy folders. Smart viewport clamping: min(x+14, innerWidth-228).
+  Kept getTooltipLines() export unchanged for existing tests.
+- New: NodeMesh showLabel prop — label Html hides when showLabel=false. SceneObjects passes
+  showLabel={hoveredId !== node.id} so the static label disappears when tooltip is showing.
+- Entrance animation: already implemented in PROMPT 17/18 — useRevealProgress(ringKey, 1200),
+  Tentacle grow-from-center with stagger delay=i*0.045. Confirmed working.
+- Tests: keyboard.test.js — 3 pure logic tests for Esc priority, Backspace with/without parent
+- Next: PROMPT 22 — signal detail drawer + node search upgrade
