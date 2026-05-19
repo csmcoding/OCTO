@@ -342,10 +342,11 @@ function GitDiffSection({ gitDiff, pc }) {
 }
 
 const OPEN_ACTIONS = [
-  { action: 'editor',   label: 'Open in Cursor',   foldersOnly: false, filesOnly: false },
-  { action: 'reveal',   label: 'Reveal in files',  foldersOnly: false, filesOnly: true  },
-  { action: 'files',    label: 'Open in Dolphin',  foldersOnly: true,  filesOnly: false },
-  { action: 'terminal', label: 'Open in Konsole',  foldersOnly: true,  filesOnly: false },
+  { action: 'editor',      label: 'Open in Cursor',   foldersOnly: false, filesOnly: false },
+  { action: 'reveal',      label: 'Reveal in files',  foldersOnly: false, filesOnly: true  },
+  { action: 'open-parent', label: 'Open parent',      foldersOnly: true,  filesOnly: false },
+  { action: 'files',       label: 'Open in Dolphin',  foldersOnly: true,  filesOnly: false },
+  { action: 'terminal',    label: 'Open in Konsole',  foldersOnly: true,  filesOnly: false },
 ]
 
 function openStatusLabel(status, defaultLabel) {
@@ -575,9 +576,15 @@ export default function Panel({
   })()
 
   const handleOpenApp = async (action) => {
+    const isParent = action === 'open-parent'
+    const targetPath = isParent
+      ? (node.path.includes('/') ? node.path.substring(0, node.path.lastIndexOf('/')) || '/' : '/')
+      : node.path
+    const backendAction = isParent ? 'files' : action
+
     setOpenStatus(prev => ({ ...prev, [action]: 'opening' }))
     try {
-      const result = await openNode(node.path, action)
+      const result = await openNode(targetPath, backendAction)
       if (result.ok) {
         setOpenStatus(prev => ({ ...prev, [action]: 'ok' }))
         setTimeout(() => setOpenStatus(prev => ({ ...prev, [action]: 'idle' })), 2000)
@@ -685,6 +692,56 @@ export default function Panel({
       {/* ── SCROLLABLE BODY ───────────────────────────────── */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 32px' }}>
 
+      {/* ── SECTION 1: ACTION STRIP ─────────────────────── */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 14 }}>
+        {actionBtns.map(({ key, icon, label, onClick }) => (
+          <button
+            key={key}
+            onClick={key === 'copy' ? handleCopyPath : key === 'copyRel' ? handleCopyRelPath : onClick}
+            style={{
+              fontFamily: MONO, fontSize: 10,
+              padding: '4px 9px', borderRadius: 5,
+              background: hoverBtn === key ? pc.actionBgHov : pc.actionBg,
+              border: `1px solid ${hoverBtn === key ? pc.actionBorderHov : pc.actionBorder}`,
+              color: (key === 'copy' && copiedPath) || (key === 'copyRel' && copiedRelPath)
+                ? pc.clean : hoverBtn === key ? pc.actionColorHov : pc.actionColor,
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+              transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+            }}
+            onMouseEnter={() => setHoverBtn(key)}
+            onMouseLeave={() => setHoverBtn(null)}
+          >
+            <span>{key === 'copy' && copiedPath ? 'Copied!' : key === 'copyRel' && copiedRelPath ? 'Copied!' : label}</span>
+          </button>
+        ))}
+        {OPEN_ACTIONS
+          .filter(({ foldersOnly, filesOnly }) =>
+            (!foldersOnly || node.type === 'folder') &&
+            (!filesOnly   || node.type === 'file')
+          )
+          .map(({ action, label }) => {
+            const st  = openStatusLabel(openStatus[action], label)
+            const key = `open-${action}`
+            return (
+              <button
+                key={key}
+                onClick={() => handleOpenApp(action)}
+                style={{
+                  fontFamily: MONO, fontSize: 10,
+                  padding: '4px 9px', borderRadius: 5,
+                  background: hoverBtn === key ? pc.altBgHov : pc.altBg,
+                  border: `1px solid ${hoverBtn === key ? pc.altBorderHov : pc.altBorder}`,
+                  color: hoverBtn === key ? pc.textPrimary : st.color,
+                  cursor: 'pointer',
+                  transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+                }}
+                onMouseEnter={() => setHoverBtn(key)}
+                onMouseLeave={() => setHoverBtn(null)}
+              >{st.text}</button>
+            )
+          })}
+      </div>
+
       {/* ── SECTION 2: METRICS ROW ──────────────────────── */}
       {metrics.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -722,63 +779,6 @@ export default function Panel({
         </>
       )}
 
-      <div style={{ height: 1, background: pc.sep, margin: '16px 0 12px' }} />
-
-      {/* ── SECTION 5: ACTIONS ROW ──────────────────────── */}
-      <div>
-        <div style={{ fontFamily: MONO, fontSize: 9, color: pc.textLabel, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-          Actions
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {actionBtns.map(({ key, icon, label, onClick }) => (
-            <button
-              key={key}
-              onClick={key === 'copy' ? handleCopyPath : key === 'copyRel' ? handleCopyRelPath : onClick}
-              style={{
-                fontFamily: MONO, fontSize: 11,
-                padding: '5px 10px', borderRadius: 6,
-                background: hoverBtn === key ? pc.actionBgHov : pc.actionBg,
-                border: `1px solid ${hoverBtn === key ? pc.actionBorderHov : pc.actionBorder}`,
-                color: (key === 'copy' && copiedPath) || (key === 'copyRel' && copiedRelPath)
-                  ? pc.clean : hoverBtn === key ? pc.actionColorHov : pc.actionColor,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
-                transition: 'background 0.12s, border-color 0.12s, color 0.12s',
-              }}
-              onMouseEnter={() => setHoverBtn(key)}
-              onMouseLeave={() => setHoverBtn(null)}
-            >
-              <span style={{ fontSize: 12 }}>{icon}</span>
-              <span>{key === 'copy' && copiedPath ? 'Copied!' : key === 'copyRel' && copiedRelPath ? 'Copied!' : label}</span>
-            </button>
-          ))}
-          {OPEN_ACTIONS
-            .filter(({ foldersOnly, filesOnly }) =>
-              (!foldersOnly || node.type === 'folder') &&
-              (!filesOnly   || node.type === 'file')
-            )
-            .map(({ action, label }) => {
-              const st  = openStatusLabel(openStatus[action], label)
-              const key = `open-${action}`
-              return (
-                <button
-                  key={key}
-                  onClick={() => handleOpenApp(action)}
-                  style={{
-                    fontFamily: MONO, fontSize: 11,
-                    padding: '5px 10px', borderRadius: 6,
-                    background: hoverBtn === key ? pc.altBgHov : pc.altBg,
-                    border: `1px solid ${hoverBtn === key ? pc.altBorderHov : pc.altBorder}`,
-                    color: hoverBtn === key ? pc.textPrimary : st.color,
-                    cursor: 'pointer',
-                    transition: 'background 0.12s, border-color 0.12s, color 0.12s',
-                  }}
-                  onMouseEnter={() => setHoverBtn(key)}
-                  onMouseLeave={() => setHoverBtn(null)}
-                >{st.text}</button>
-              )
-            })}
-        </div>
-      </div>
 
       </div> {/* end scrollable body */}
     </div>

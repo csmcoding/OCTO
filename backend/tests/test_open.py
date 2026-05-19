@@ -29,10 +29,10 @@ def test_open_reveal_file_uses_select_flag():
     assert "/tmp/test.py" in cmd
 
 
-def test_open_reveal_folder_omits_select_flag():
-    with patch("subprocess.Popen") as mock_popen, \
-         patch("os.path.isfile", return_value=False):
+def test_open_reveal_folder_uses_select_flag():
+    with patch("subprocess.Popen") as mock_popen:
         result = open_path(OpenRequest(path="/tmp", action="reveal"))
     assert result["ok"] is True
     cmd = mock_popen.call_args[0][0]
-    assert "--select" not in cmd
+    assert "--select" in cmd
+    assert "/tmp" in cmd

@@ -159,11 +159,7 @@ def open_path(req: OpenRequest) -> dict:
         "editor":   lambda p: [_resolve_cmd(config.EDITOR), p],
         "files":    lambda p: [_resolve_cmd(config.FILE_MANAGER), p],
         "terminal": lambda p: [_resolve_cmd(config.TERMINAL), "--workdir", p],
-        "reveal":   lambda p: (
-            [_resolve_cmd(config.FILE_MANAGER), "--select", p]
-            if os.path.isfile(p) else
-            [_resolve_cmd(config.FILE_MANAGER), p]
-        ),
+        "reveal":   lambda p: [_resolve_cmd(config.FILE_MANAGER), "--select", p],
     }
     if req.action not in action_map:
         return {"ok": False, "error": f"unknown action: {req.action}"}
