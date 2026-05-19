@@ -27,6 +27,7 @@ export default function Minimap({
   colorTheme = 'dark',
   activityMode = false,
   activityIndex = null,
+  archMode = false,
 }) {
   const isLight = colorTheme === 'light'
   const mmBg     = isLight ? 'rgba(235,240,250,0.92)' : 'rgba(6,6,18,0.85)'
@@ -248,7 +249,11 @@ export default function Minimap({
         <span style={{
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: 8,
-          color: 'rgba(110,110,158,0.55)',
+          color: activityMode
+            ? 'rgba(255,107,53,0.7)'
+            : archMode
+              ? 'rgba(167,139,250,0.7)'
+              : 'rgba(110,110,158,0.55)',
           letterSpacing: '0.06em',
           textTransform: 'uppercase',
           pointerEvents: 'none',
@@ -257,7 +262,7 @@ export default function Minimap({
           textOverflow: 'ellipsis',
           maxWidth: 160,
         }}>
-          {nodes?.length ?? 0} nodes
+          {nodes?.length ?? 0} nodes{activityMode ? ' · Activity' : archMode ? ' · Architecture' : ''}
         </span>
         <button
           onClick={onToggleCollapsed}

@@ -20,11 +20,12 @@ export default function ArchLegend({ summary = null, colorTheme = 'dark' }) {
     }}>
       <div style={{
         fontFamily: MONO, fontSize: 8,
-        color: isLight ? 'rgba(30,60,100,0.5)' : 'rgba(140,145,190,0.6)',
-        letterSpacing: '0.06em', textTransform: 'uppercase',
+        color: isLight ? 'rgba(80,40,160,0.7)' : 'rgba(167,139,250,0.85)',
+        letterSpacing: '0.1em', textTransform: 'uppercase',
         marginBottom: 5,
+        fontWeight: 600,
       }}>
-        Architecture
+        Architecture mode
       </div>
       {Object.entries(CLUSTERS).map(([key, { color, label }]) => {
         const count = summary?.[key]
