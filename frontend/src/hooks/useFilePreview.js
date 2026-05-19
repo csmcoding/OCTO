@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
+import { apiUrl } from '../utils/api'
 
 export function buildPreviewUrl(path, lines = 60) {
-  return `/preview?path=${encodeURIComponent(path)}&lines=${lines}`
+  return apiUrl(`/preview?path=${encodeURIComponent(path)}&lines=${lines}`)
 }
 
 export function shouldFetchPreview(node) {

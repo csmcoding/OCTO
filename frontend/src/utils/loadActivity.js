@@ -1,4 +1,5 @@
 import { indexActivityByPath } from './activityAggregate.js'
+import { apiUrl } from './api'
 
 /**
  * Normalise raw /api/activity JSON into a usable frontend structure.
@@ -15,7 +16,7 @@ export function processActivityResponse(data) {
 
 /** Fetch activity data for rootPath and return a processed result. */
 export async function loadActivity(rootPath) {
-  const res = await fetch(`/api/activity?path=${encodeURIComponent(rootPath)}`)
+  const res = await fetch(apiUrl(`/api/activity?path=${encodeURIComponent(rootPath)}`))
   if (!res.ok) throw new Error(`activity fetch failed: ${res.status}`)
   return processActivityResponse(await res.json())
 }

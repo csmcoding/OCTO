@@ -1,19 +1,21 @@
+import { apiUrl } from './api'
+
 export async function loadTree(depth = 2) {
-  const res = await fetch(`/tree?depth=${depth}`)
+  const res = await fetch(apiUrl(`/tree?depth=${depth}`))
   if (!res.ok) throw new Error(`Failed to load tree: ${res.status}`)
   return res.json()
 }
 
 export async function loadSubtree(path, depth = 3) {
   const res = await fetch(
-    `/subtree?path=${encodeURIComponent(path)}&depth=${depth}`
+    apiUrl(`/subtree?path=${encodeURIComponent(path)}&depth=${depth}`)
   )
   if (!res.ok) throw new Error(`Failed to load subtree: ${path}`)
   return res.json()
 }
 
 export async function openNode(path, action) {
-  const res = await fetch('/open', {
+  const res = await fetch(apiUrl('/open'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path, action }),
@@ -29,7 +31,7 @@ export async function openNode(path, action) {
  */
 export function triggerScan(onProgress) {
   return new Promise((resolve, reject) => {
-    const es = new EventSource('/scan')
+    const es = new EventSource(apiUrl('/scan'))
     es.onmessage = (e) => {
       const data = JSON.parse(e.data)
       onProgress(data)
