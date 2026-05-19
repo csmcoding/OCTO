@@ -1277,3 +1277,45 @@ bash install.sh              # first-time setup
 - Folder activity = aggregate of descendant files (max recency, summed counts)
 
 **Next:** Choose next feature or continue beta hardening
+
+---
+
+## PROMPT 41 — Beta Polish / Mode Clarity (COMPLETE)
+
+**Status: COMPLETE**
+
+OCTO now makes filesystem, architecture, and activity modes immediately legible without docs.
+
+**What was implemented:**
+
+- **SettingsPanel** (`SettingsPanel.jsx`): Active mode (Activity or Architecture) shown as a colored pill next to the "Settings" title when settings panel is open. Orange for Activity, purple for Architecture. No pill in default Filesystem mode.
+
+- **ActivityLegend** (`ActivityLegend.jsx`): Added "Activity mode" header in orange above the color key rows. Previously had no header — just showed color dots.
+
+- **ArchLegend** (`ArchLegend.jsx`): Changed "Architecture" label to "Architecture mode" in purple. Stronger color contrast so it reads as a mode name, not a section label.
+
+- **Minimap** (`Minimap.jsx`): Added `archMode` prop. Header row now shows: "N nodes · Activity" (orange text) or "N nodes · Architecture" (purple text) when a non-default mode is active. This is the single always-visible mode indicator since the minimap header is persistent.
+
+- **KeyboardLegend** (`ThreeScene.jsx`): The `?` popup now has a LENSES section above shortcuts. Shows all three lenses: Filesystem / Architecture / Activity, with one-line descriptions. Active lens is highlighted with a color dot and bold text. This answers "what does each mode do" for first-time users without a separate help modal.
+
+**Mode clarity rules now in effect:**
+- Minimap header always names the active mode
+- Legend headers identify themselves as "mode" not just color keys
+- Settings panel shows active mode when open
+- KeyboardLegend popup explains all three lenses and highlights the current one
+- Filesystem (default) = no special badge; Architecture = purple; Activity = orange
+
+**Where mode explanation appears:**
+1. Minimap header (always visible, even when settings is closed)
+2. KeyboardLegend `?` popup → LENSES section
+3. ActivityLegend / ArchLegend headers (visible when those modes are on)
+4. SettingsPanel header pill (visible when settings is open)
+
+**What is still missing before beta:**
+- No per-node label overlay in arch mode (nodes colored but not labeled on scene)
+- Light mode support for mode pill in SettingsPanel (currently hardcoded dark)
+- No mode indicator when minimap is collapsed (only the legend shows then)
+
+**Files changed:** `SettingsPanel.jsx`, `ActivityLegend.jsx`, `ArchLegend.jsx`, `Minimap.jsx`, `ThreeScene.jsx`
+
+**Tests:** 252 frontend + 56 backend — all pass. Build clean.
