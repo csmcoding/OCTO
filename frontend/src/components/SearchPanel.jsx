@@ -3,6 +3,7 @@ import { fuzzySearch } from '../utils/fuzzySearch.js'
 import { getActiveSignals, SIGNAL_COLORS } from '../utils/signals.js'
 import { getActivityLevel } from '../utils/activityAggregate.js'
 import { openNode } from '../utils/loadTree.js'
+import { classifyNode, CLUSTERS } from '../utils/archClassify.js'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
@@ -89,7 +90,7 @@ function SignalDots({ node }) {
   )
 }
 
-function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, onQuickOpen, sc, activityLevel }) {
+function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, onQuickOpen, sc, activityLevel, archCluster = null }) {
   const { node, matchReason } = result
   const path = relPath(node.path, rootPath)
   const displayPath = path.length > 60 ? '…' + path.slice(-60) : path
@@ -175,6 +176,21 @@ function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, onQuickO
               {ACT_LABELS[activityLevel]}
             </span>
           )}
+          {archCluster && (() => {
+            const cl = CLUSTERS[archCluster]
+            return cl ? (
+              <span style={{
+                fontFamily: MONO, fontSize: 8, fontWeight: 600,
+                color: cl.color,
+                background: cl.color + '20',
+                border: `1px solid ${cl.color}44`,
+                borderRadius: 3, padding: '1px 4px', flexShrink: 0,
+                letterSpacing: '0.03em',
+              }}>
+                {cl.label}
+              </span>
+            ) : null
+          })()}
           {matchReason && (
             <span style={{ fontFamily: MONO, fontSize: 9, color: sc.rowMatch, whiteSpace: 'nowrap' }}>
               {matchReason}
@@ -195,6 +211,7 @@ export default function SearchPanel({
   onDrillToNode,
   colorTheme = 'dark',
   activityIndex = null,
+  archMode = false,
 }) {
   const [query, setQuery]           = useState('')
   const [activeChip, setActiveChip] = useState('all')
@@ -408,6 +425,7 @@ export default function SearchPanel({
             const actLvl = activityIndex
               ? getActivityLevel(activityIndex[result.node.path] ?? null)
               : null
+            const archCluster = archMode ? classifyNode(result.node).cluster : null
             return (
               <div key={result.node.id ?? result.node.path} ref={i === selectedIdx ? activeRowRef : null}>
                 <ResultRow
@@ -419,6 +437,7 @@ export default function SearchPanel({
                   onQuickOpen={(path) => { openNode(path, 'editor').catch(console.error); onClose?.() }}
                   sc={sc}
                   activityLevel={actLvl}
+                  archCluster={archCluster}
                 />
               </div>
             )
