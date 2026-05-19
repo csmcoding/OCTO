@@ -3,25 +3,33 @@ import { useState } from 'react'
 const MONO = "'JetBrains Mono', 'Fira Code', monospace"
 const SANS = "'Outfit', 'Inter', sans-serif"
 
-function Toggle({ on, onChange, label, description }) {
+function Toggle({ on, onChange, label, description, isLight = false }) {
+  const sepColor = isLight ? 'rgba(0,96,128,0.08)' : 'rgba(124,157,245,0.07)'
+  const labelColor = on
+    ? (isLight ? '#1a2a3a' : '#e2e2f2')
+    : (isLight ? 'rgba(30,60,100,0.5)' : 'rgba(160,160,200,0.65)')
+  const descColor = isLight ? 'rgba(30,60,100,0.4)' : 'rgba(110,110,158,0.5)'
+  const trackBg = on ? 'rgba(78,205,196,0.7)' : (isLight ? 'rgba(0,80,120,0.15)' : 'rgba(110,110,158,0.25)')
+  const trackBdr = on ? 'rgba(78,205,196,0.9)' : (isLight ? 'rgba(0,80,120,0.2)' : 'rgba(110,110,158,0.35)')
+  const thumbBg = on ? '#fff' : (isLight ? 'rgba(0,80,120,0.4)' : 'rgba(160,160,200,0.5)')
   return (
     <label style={{
       display: 'flex', justifyContent: 'space-between',
       alignItems: 'flex-start', gap: 12,
       padding: '8px 0',
-      borderBottom: '1px solid rgba(124,157,245,0.07)',
+      borderBottom: `1px solid ${sepColor}`,
       cursor: 'pointer',
     }}>
       <div>
         <div style={{
           fontFamily: SANS, fontSize: 12, fontWeight: 500,
-          color: on ? '#e2e2f2' : 'rgba(160,160,200,0.65)',
+          color: labelColor,
           transition: 'color 0.15s',
         }}>{label}</div>
         {description && (
           <div style={{
             fontFamily: MONO, fontSize: 9,
-            color: 'rgba(110,110,158,0.5)',
+            color: descColor,
             marginTop: 2, lineHeight: 1.4,
           }}>{description}</div>
         )}
@@ -30,8 +38,8 @@ function Toggle({ on, onChange, label, description }) {
         onClick={onChange}
         style={{
           width: 32, height: 18, borderRadius: 9,
-          background: on ? 'rgba(78,205,196,0.7)' : 'rgba(110,110,158,0.25)',
-          border: `1px solid ${on ? 'rgba(78,205,196,0.9)' : 'rgba(110,110,158,0.35)'}`,
+          background: trackBg,
+          border: `1px solid ${trackBdr}`,
           position: 'relative', flexShrink: 0,
           transition: 'background 0.2s, border-color 0.2s',
           cursor: 'pointer',
@@ -41,7 +49,7 @@ function Toggle({ on, onChange, label, description }) {
           position: 'absolute',
           top: 2, left: on ? 15 : 2,
           width: 12, height: 12, borderRadius: '50%',
-          background: on ? '#fff' : 'rgba(160,160,200,0.5)',
+          background: thumbBg,
           transition: 'left 0.2s cubic-bezier(0.16,1,0.3,1)',
           boxShadow: on ? '0 1px 4px rgba(0,0,0,0.4)' : 'none',
         }} />
@@ -50,24 +58,29 @@ function Toggle({ on, onChange, label, description }) {
   )
 }
 
-function Slider({ value, min, max, step = 1, onChange, label, description, format = v => v }) {
+function Slider({ value, min, max, step = 1, onChange, label, description, format = v => v, isLight = false }) {
+  const sepColor = isLight ? 'rgba(0,96,128,0.08)' : 'rgba(124,157,245,0.07)'
+  const labelColor = isLight ? 'rgba(30,60,100,0.8)' : 'rgba(200,200,230,0.8)'
+  const valueColor = isLight ? 'rgba(0,80,120,0.8)' : 'rgba(124,157,245,0.8)'
+  const descColor  = isLight ? 'rgba(30,60,100,0.4)' : 'rgba(110,110,158,0.5)'
+  const endColor   = isLight ? 'rgba(30,60,100,0.3)' : 'rgba(110,110,158,0.35)'
   return (
-    <div style={{ padding: '8px 0', borderBottom: '1px solid rgba(124,157,245,0.07)' }}>
+    <div style={{ padding: '8px 0', borderBottom: `1px solid ${sepColor}` }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between',
         alignItems: 'baseline', marginBottom: 6,
       }}>
-        <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: 'rgba(200,200,230,0.8)' }}>
+        <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: labelColor }}>
           {label}
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(124,157,245,0.8)' }}>
+        <div style={{ fontFamily: MONO, fontSize: 10, color: valueColor }}>
           {format(value)}
         </div>
       </div>
       {description && (
         <div style={{
           fontFamily: MONO, fontSize: 9,
-          color: 'rgba(110,110,158,0.5)',
+          color: descColor,
           marginBottom: 6, lineHeight: 1.4,
         }}>{description}</div>
       )}
@@ -81,7 +94,7 @@ function Slider({ value, min, max, step = 1, onChange, label, description, forma
       <div style={{
         display: 'flex', justifyContent: 'space-between',
         fontFamily: MONO, fontSize: 8,
-        color: 'rgba(110,110,158,0.35)',
+        color: endColor,
         marginTop: 2,
       }}>
         <span>{format(min)}</span>
@@ -91,46 +104,60 @@ function Slider({ value, min, max, step = 1, onChange, label, description, forma
   )
 }
 
-function ThemeSelector({ value, onChange }) {
+function ThemeSelector({ value, onChange, isLight = false }) {
   const themes = [
     { id: 'dark',      label: 'Dark',               preview: ['#0a0a18', '#171628', '#4ecdc4'] },
     { id: 'deepspace', label: 'Deep Space',          preview: ['#04040f', '#0d0d24', '#7c9df5'] },
     { id: 'light',     label: 'Light — Future Glass',preview: ['#e8edf5', '#d4dce9', '#006080'] },
   ]
+  const sectionColor = isLight ? 'rgba(30,60,100,0.8)' : 'rgba(200,200,230,0.8)'
   return (
     <div style={{ padding: '8px 0' }}>
       <div style={{
         fontFamily: SANS, fontSize: 12, fontWeight: 500,
-        color: 'rgba(200,200,230,0.8)', marginBottom: 8,
+        color: sectionColor, marginBottom: 8,
       }}>Color theme</div>
       <div style={{ display: 'flex', gap: 8 }}>
-        {themes.map(t => (
-          <button
-            key={t.id}
-            onClick={() => onChange(t.id)}
-            style={{
-              flex: 1, padding: '6px 8px',
-              background: value === t.id ? 'rgba(124,157,245,0.12)' : 'rgba(110,110,158,0.06)',
-              border: `1px solid ${value === t.id ? 'rgba(124,157,245,0.4)' : 'rgba(110,110,158,0.2)'}`,
-              borderRadius: 7, cursor: 'pointer',
-              transition: 'background 0.15s, border-color 0.15s',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 3, marginBottom: 5, justifyContent: 'center' }}>
-              {t.preview.map((c, i) => (
-                <div key={i} style={{
-                  width: i === 2 ? 8 : 12, height: 8, borderRadius: 3,
-                  background: c, border: '1px solid rgba(255,255,255,0.1)',
-                }} />
-              ))}
-            </div>
-            <div style={{
-              fontFamily: MONO, fontSize: 9,
-              color: value === t.id ? '#e2e2f2' : 'rgba(110,110,158,0.6)',
-              textAlign: 'center', letterSpacing: '0.04em',
-            }}>{t.label}</div>
-          </button>
-        ))}
+        {themes.map(t => {
+          const active = value === t.id
+          const btnBg  = active
+            ? (isLight ? 'rgba(0,96,128,0.12)' : 'rgba(124,157,245,0.12)')
+            : (isLight ? 'rgba(0,96,128,0.04)'  : 'rgba(110,110,158,0.06)')
+          const btnBdr = active
+            ? (isLight ? 'rgba(0,96,128,0.4)'   : 'rgba(124,157,245,0.4)')
+            : (isLight ? 'rgba(0,96,128,0.15)'   : 'rgba(110,110,158,0.2)')
+          const txtColor = active
+            ? (isLight ? '#1a2a3a' : '#e2e2f2')
+            : (isLight ? 'rgba(30,60,100,0.5)' : 'rgba(110,110,158,0.6)')
+          return (
+            <button
+              key={t.id}
+              onClick={() => onChange(t.id)}
+              style={{
+                flex: 1, padding: '6px 8px',
+                background: btnBg,
+                border: `1px solid ${btnBdr}`,
+                borderRadius: 7, cursor: 'pointer',
+                transition: 'background 0.15s, border-color 0.15s',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 3, marginBottom: 5, justifyContent: 'center' }}>
+                {t.preview.map((c, i) => (
+                  <div key={i} style={{
+                    width: i === 2 ? 8 : 12, height: 8, borderRadius: 3,
+                    background: c,
+                    border: isLight ? '1px solid rgba(0,0,0,0.08)' : '1px solid rgba(255,255,255,0.1)',
+                  }} />
+                ))}
+              </div>
+              <div style={{
+                fontFamily: MONO, fontSize: 9,
+                color: txtColor,
+                textAlign: 'center', letterSpacing: '0.04em',
+              }}>{t.label}</div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
@@ -138,11 +165,25 @@ function ThemeSelector({ value, onChange }) {
 
 export default function SettingsPanel({ settings, setSetting, onClose, onRescan }) {
   const [rescanning, setRescanning] = useState(false)
+  const isLight = settings.colorTheme === 'light'
 
   const handleRescan = async () => {
     setRescanning(true)
     try { await onRescan?.() } finally { setRescanning(false) }
   }
+
+  const panelBg     = isLight ? 'rgba(240,245,252,0.97)' : 'rgba(6,6,18,0.97)'
+  const panelBorder = isLight ? 'rgba(0,96,128,0.16)'    : 'rgba(124,157,245,0.18)'
+  const panelShadow = isLight ? '0 8px 32px rgba(0,60,100,0.14)' : '0 16px 48px rgba(0,0,0,0.8)'
+  const titleColor  = isLight ? '#1a2a3a'                : '#e2e2f2'
+  const closeColor  = isLight ? 'rgba(30,60,100,0.45)'   : 'rgba(110,110,158,0.5)'
+  const closeHov    = isLight ? '#1a2a3a'                : '#e2e2f2'
+
+  const btnIdleBg   = isLight ? 'rgba(0,96,128,0.04)'    : 'rgba(110,110,158,0.06)'
+  const btnIdleBdr  = isLight ? 'rgba(0,96,128,0.14)'    : 'rgba(110,110,158,0.18)'
+  const btnIdleClr  = isLight ? 'rgba(30,60,100,0.5)'    : 'rgba(110,110,158,0.5)'
+  const btnHovReset = isLight ? 'rgba(0,96,128,0.08)'    : 'rgba(124,157,245,0.08)'
+  const btnHovClrReset = isLight ? 'rgba(0,60,100,0.8)'  : 'rgba(160,160,220,0.8)'
 
   return (
     <>
@@ -154,11 +195,11 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
         left: 20,
         zIndex: 96,
         width: 260,
-        background: 'rgba(6,6,18,0.97)',
-        border: '1px solid rgba(124,157,245,0.18)',
+        background: panelBg,
+        border: `1px solid ${panelBorder}`,
         borderRadius: 12,
         backdropFilter: 'blur(24px) saturate(160%)',
-        boxShadow: '0 16px 48px rgba(0,0,0,0.8)',
+        boxShadow: panelShadow,
         padding: '14px 16px',
         animation: 'slideUp 0.2s cubic-bezier(0.16,1,0.3,1)',
       }}>
@@ -169,7 +210,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{
               fontFamily: SANS, fontSize: 13, fontWeight: 600,
-              color: '#e2e2f2', letterSpacing: '-0.01em',
+              color: titleColor, letterSpacing: '-0.01em',
             }}>Settings</div>
             {(settings.activityMode || settings.archMode) && (
               <span style={{
@@ -188,34 +229,34 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
             onClick={onClose}
             style={{
               background: 'none', border: 'none',
-              color: 'rgba(110,110,158,0.5)', cursor: 'pointer',
+              color: closeColor, cursor: 'pointer',
               fontSize: 14, padding: '2px 6px', borderRadius: 4,
               transition: 'color 0.15s',
             }}
-            onMouseEnter={e => e.currentTarget.style.color = '#e2e2f2'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(110,110,158,0.5)'}
+            onMouseEnter={e => e.currentTarget.style.color = closeHov}
+            onMouseLeave={e => e.currentTarget.style.color = closeColor}
           >×</button>
         </div>
 
-        <Toggle
+        <Toggle isLight={isLight}
           on={settings.autoRotate}
           onChange={() => setSetting('autoRotate', !settings.autoRotate)}
           label="Auto-rotation"
           description="Slowly orbits the scene camera"
         />
-        <Toggle
+        <Toggle isLight={isLight}
           on={settings.showLabels}
           onChange={() => setSetting('showLabels', !settings.showLabels)}
           label="Node labels"
           description="Show name below each node"
         />
-        <Toggle
+        <Toggle isLight={isLight}
           on={settings.sway}
           onChange={() => setSetting('sway', !settings.sway)}
           label="Tentacle sway"
           description="Organic idle animation"
         />
-        <Toggle
+        <Toggle isLight={isLight}
           on={settings.activityMode}
           onChange={() => {
             const next = !settings.activityMode
@@ -225,7 +266,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
           label="Activity mode  [T]"
           description="Overlay git recency and churn"
         />
-        <Toggle
+        <Toggle isLight={isLight}
           on={settings.archMode}
           onChange={() => {
             const next = !settings.archMode
@@ -235,7 +276,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
           label="Architecture mode  [A]"
           description="Color nodes by code category"
         />
-        <Slider
+        <Slider isLight={isLight}
           value={settings.scanDepth}
           min={1} max={5}
           label="Scan depth"
@@ -243,7 +284,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
           onChange={v => setSetting('scanDepth', v)}
           format={v => `${v} ${v === 1 ? 'level' : 'levels'}`}
         />
-        <ThemeSelector
+        <ThemeSelector isLight={isLight}
           value={settings.colorTheme}
           onChange={v => setSetting('colorTheme', v)}
         />
@@ -254,11 +295,11 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
             disabled={rescanning}
             style={{
               flex: 1, padding: '6px 0',
-              background: rescanning ? 'rgba(78,205,196,0.08)' : 'rgba(110,110,158,0.06)',
-              border: `1px solid ${rescanning ? 'rgba(78,205,196,0.35)' : 'rgba(110,110,158,0.18)'}`,
+              background: rescanning ? 'rgba(78,205,196,0.08)' : btnIdleBg,
+              border: `1px solid ${rescanning ? 'rgba(78,205,196,0.35)' : btnIdleBdr}`,
               borderRadius: 6, cursor: rescanning ? 'default' : 'pointer',
               fontFamily: MONO, fontSize: 9,
-              color: rescanning ? 'rgba(78,205,196,0.8)' : 'rgba(110,110,158,0.5)',
+              color: rescanning ? 'rgba(78,205,196,0.8)' : btnIdleClr,
               letterSpacing: '0.04em',
               transition: 'background 0.15s, color 0.15s',
             }}
@@ -270,8 +311,8 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
             }}
             onMouseLeave={e => {
               if (!rescanning) {
-                e.currentTarget.style.background = 'rgba(110,110,158,0.06)'
-                e.currentTarget.style.color = 'rgba(110,110,158,0.5)'
+                e.currentTarget.style.background = btnIdleBg
+                e.currentTarget.style.color = btnIdleClr
               }
             }}
           >{rescanning ? 'rescanning…' : 'rescan  [R]'}</button>
@@ -288,21 +329,21 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
             title="Reset to dark theme defaults"
             style={{
               flex: 1, padding: '6px 0',
-              background: 'rgba(110,110,158,0.06)',
-              border: '1px solid rgba(110,110,158,0.18)',
+              background: btnIdleBg,
+              border: `1px solid ${btnIdleBdr}`,
               borderRadius: 6, cursor: 'pointer',
               fontFamily: MONO, fontSize: 9,
-              color: 'rgba(110,110,158,0.5)',
+              color: btnIdleClr,
               letterSpacing: '0.04em',
               transition: 'background 0.15s, color 0.15s',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.background = 'rgba(124,157,245,0.08)'
-              e.currentTarget.style.color = 'rgba(160,160,220,0.8)'
+              e.currentTarget.style.background = btnHovReset
+              e.currentTarget.style.color = btnHovClrReset
             }}
             onMouseLeave={e => {
-              e.currentTarget.style.background = 'rgba(110,110,158,0.06)'
-              e.currentTarget.style.color = 'rgba(110,110,158,0.5)'
+              e.currentTarget.style.background = btnIdleBg
+              e.currentTarget.style.color = btnIdleClr
             }}
           >reset</button>
         </div>
