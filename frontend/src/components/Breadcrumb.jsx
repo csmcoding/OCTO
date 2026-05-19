@@ -36,10 +36,18 @@ export function buildCrumbList(navStack) {
   return [first, ellipsis, ...last3]
 }
 
-export default function Breadcrumb({ navStack, onCrumbClick }) {
+export default function Breadcrumb({ navStack, onCrumbClick, colorTheme = 'dark' }) {
   const [hoveredVisualIdx, setHoveredVisualIdx] = useState(null)
   const crumbs = buildCrumbList(navStack)
   if (crumbs.length === 0) return null
+
+  const isLight = colorTheme === 'light'
+  const crumbBg    = isLight ? 'rgba(235,240,250,0.88)' : 'rgba(8,8,20,0.75)'
+  const crumbBorder= isLight ? 'rgba(0,100,140,0.14)'   : 'rgba(124,157,245,0.14)'
+  const crumbColor = isLight ? 'rgba(30,60,100,0.55)'   : '#6e6e9e'
+  const crumbLink  = isLight ? '#006080'               : '#7c9df5'
+  const crumbHov   = isLight ? '#004a60'               : '#c8a2ff'
+  const crumbCurr  = isLight ? '#1a2a3a'               : '#e2e2f2'
 
   return (
     <div style={{
@@ -47,15 +55,15 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
       top: 16,
       left: '50%',
       transform: 'translateX(-50%)',
-      background: 'rgba(8, 8, 20, 0.75)',
-      border: '1px solid rgba(124,157,245,0.14)',
+      background: crumbBg,
+      border: `1px solid ${crumbBorder}`,
       backdropFilter: 'blur(12px)',
       borderRadius: 20,
       padding: '5px 14px',
       fontFamily: MONO,
       fontSize: 11,
       letterSpacing: '0.02em',
-      color: '#6e6e9e',
+      color: crumbColor,
       zIndex: 120,
       whiteSpace: 'nowrap',
       userSelect: 'none',
@@ -70,11 +78,11 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
           {crumb.clickable ? (
             <span
               style={{
-                color: hoveredVisualIdx === i ? '#c8a2ff' : '#7c9df5',
+                color: hoveredVisualIdx === i ? crumbHov : crumbLink,
                 cursor: 'pointer',
                 padding: '2px 4px',
                 borderRadius: 3,
-                background: hoveredVisualIdx === i ? 'rgba(200,162,255,0.08)' : 'transparent',
+                background: hoveredVisualIdx === i ? (isLight ? 'rgba(0,100,140,0.08)' : 'rgba(200,162,255,0.08)') : 'transparent',
                 transition: 'color 0.15s, background 0.15s',
               }}
               onMouseEnter={() => setHoveredVisualIdx(i)}
@@ -85,7 +93,7 @@ export default function Breadcrumb({ navStack, onCrumbClick }) {
             </span>
           ) : (
             <span style={{
-              color: crumb.label === '...' ? '#3a3a5e' : '#e2e2f2',
+              color: crumb.label === '...' ? (isLight ? 'rgba(30,60,100,0.3)' : '#3a3a5e') : crumbCurr,
               fontWeight: crumb.label === '...' ? 400 : 600,
               padding: '2px 4px',
             }}>

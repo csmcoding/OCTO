@@ -21,7 +21,12 @@ export default function Minimap({
   onJumpToNode,
   collapsed,
   onToggleCollapsed,
+  colorTheme = 'dark',
 }) {
+  const isLight = colorTheme === 'light'
+  const mmBg     = isLight ? 'rgba(235,240,250,0.92)' : 'rgba(6,6,18,0.85)'
+  const mmBorder = isLight ? 'rgba(0,100,140,0.14)'   : 'rgba(124,157,245,0.14)'
+  const mmShadow = isLight ? '0 8px 24px rgba(0,60,100,0.12)' : '0 8px 32px rgba(0,0,0,0.6)'
   const canvasRef = useRef(null)
 
   useEffect(() => {
@@ -168,15 +173,15 @@ export default function Minimap({
           width: COL_W,
           height: COL_H,
           borderRadius: '50%',
-          background: 'rgba(6,6,18,0.85)',
-          border: '1px solid rgba(124,157,245,0.22)',
+          background: mmBg,
+          border: `1px solid ${mmBorder}`,
           backdropFilter: 'blur(12px)',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+          boxShadow: mmShadow,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'rgba(140,148,200,0.7)',
+          color: isLight ? 'rgba(0,80,120,0.6)' : 'rgba(140,148,200,0.7)',
           fontSize: 16,
           transition: 'border-color 0.15s, color 0.15s',
         }}
@@ -200,12 +205,12 @@ export default function Minimap({
       zIndex: 80,
       width: EXP_W,
       height: EXP_H,
-      background: 'rgba(6,6,18,0.85)',
-      border: '1px solid rgba(124,157,245,0.14)',
+      background: mmBg,
+      border: `1px solid ${mmBorder}`,
       borderRadius: 12,
       backdropFilter: 'blur(12px)',
       overflow: 'hidden',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+      boxShadow: mmShadow,
     }}>
       {/* Header */}
       <div style={{

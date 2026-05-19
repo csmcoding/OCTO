@@ -991,3 +991,54 @@ shortcut `useEffect`. No logic changes — pure reorder.
   loadActivity.test.js (9), panel additions (3) = 33 new tests total
 - All 154 frontend + 54 backend tests green, build clean
 - Next: PROMPT 34 — semantic clustering / architecture mode
+
+---
+
+## PROMPT 35 handoff — Authored Light Mode / Future-Glass Visual System
+
+**Status:** Complete. All 166 frontend + 54 backend tests green, build clean.
+
+### What was built
+
+Added a fully authored `light` colorTheme equal in aesthetic quality to the existing dark themes.
+Design identity: "Future Observatory / Living Glass" — pearl-blue scene, silver-blue particles,
+crisp deep-cyan rims, frosted-glass UI chrome.
+
+**New:** `THEMES` config object in `palette.js` (dark / deepspace / light) covering every
+visual layer — scene, particles, lights, grid, fresnel, tentacle, ripple, UI chrome.
+
+**Scene layer (ThreeScene.jsx):**
+- SceneBackground now reads from THEMES (bg, fogColor, fogDensity)
+- AnimatedFillLight accepts color/intensity props → driven by theme.fillLight
+- Lights (ambient, center, top, side) all read from theme config
+- Grid cellColor/sectionColor driven by theme
+- StarField hidden when theme.showStars === false (light mode)
+- MarineSnow, Tentacle, HoverRipple, NodeMesh all receive colorTheme prop
+
+**3D mesh layer:**
+- NodeMesh.jsx: makeFresnelMaterial accepts theme config; adds uColorBoost uniform
+  (fragment shader no longer hardcodes 0.4 — reads uniform)
+- MarineSnow.jsx: silver-blue particles (#8ab8d8), NormalBlending in light
+- Tentacle.jsx: cool-silver base (#c8d4e4), lower emissive/opacity in light
+- HoverRipple.jsx: deep-cyan (#00a8c8), NormalBlending in light, reduced max opacity
+
+**UI chrome (frost-glass):**
+- Panel.jsx: getPanelColors(colorTheme) helper threads through all sub-components
+  (MetricChip, SignalRow, FilePreviewSection, GitDiffSection, ActivitySection, ActivityMetaRow)
+  Panel bg → rgba(240,245,252,0.92), text → #1a2a3a
+- SearchPanel.jsx: getSearchColors(colorTheme) helper; overlay, dialog, input, chips,
+  ResultRow all theme-aware
+- Minimap.jsx: frost-glass container in light mode
+- Breadcrumb.jsx: frost-glass pill with dark link/current text in light mode
+- SettingsPanel.jsx: added 'light' → 'Light — Future Glass' to ThemeSelector
+
+**Tests:** 10 new tests in lightMode.test.js (all pure data, no rendering):
+- THEMES has all three variants with required keys
+- light.showStars === false, dark/deepspace === true
+- light.snowBlending/rippleBlending === 'normal' (additive invisible on white)
+- light.ambientIntensity > 4× dark (bright observatory)
+- light.rimColor === '#006080' (deep cyan)
+- light.colorBoost > dark (more pigment visibility on bright bg)
+- light.uiText === '#1a2a3a' (dark readable on white)
+
+**Next:** PROMPT 36 (or TBD by user)

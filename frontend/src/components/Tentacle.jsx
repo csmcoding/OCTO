@@ -2,6 +2,7 @@ import React, { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { TubeGeometry } from 'three'
 import { swayTentacle } from '../utils/buildTentacleLayout'
+import { THEMES } from '../utils/palette'
 
 const SEGMENTS_HI = 24  // ≤30 nodes in scene, or hovered
 const SEGMENTS_LO = 10  // >30 nodes in scene, not hovered
@@ -12,6 +13,7 @@ function Tentacle({
   hovered = false,
   nodeCount = 1,
   sway = true,
+  colorTheme = 'dark',
 }) {
   const meshRef = useRef()
   const geoRef  = useRef(null)
@@ -68,14 +70,16 @@ function Tentacle({
     tmpGeo.dispose()
   })
 
+  const th = THEMES[colorTheme] ?? THEMES.dark
+
   return (
     <mesh ref={meshRef} geometry={initGeo}>
       <meshStandardMaterial
-        color="#0d1320"
+        color={th.tentacleBase}
         emissive={color}
-        emissiveIntensity={hovered ? 0.14 : 0.10}
+        emissiveIntensity={hovered ? th.tentacleEmissiveHover : th.tentacleEmissiveIdle}
         transparent
-        opacity={hovered ? 0.88 : 0.58}
+        opacity={hovered ? th.tentacleOpacityHover : th.tentacleOpacityIdle}
         roughness={0.6}
         metalness={0.1}
       />

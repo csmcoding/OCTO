@@ -1,12 +1,13 @@
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { BufferGeometry, BufferAttribute, PointsMaterial, AdditiveBlending } from 'three'
+import { BufferGeometry, BufferAttribute, PointsMaterial, AdditiveBlending, NormalBlending } from 'three'
+import { THEMES } from '../utils/palette'
 
 const COUNT  = 400
 const SPREAD = 14
 const SPEED  = 0.008
 
-export default function MarineSnow({ sway = true }) {
+export default function MarineSnow({ sway = true, colorTheme = 'dark' }) {
   const pointsRef = useRef()
 
   const { positions, velocities } = useMemo(() => {
@@ -30,15 +31,20 @@ export default function MarineSnow({ sway = true }) {
     return geo
   }, [positions])
 
-  const material = useMemo(() => new PointsMaterial({
-    color: '#4ecdc4',
-    size: 0.03,
-    transparent: true,
-    opacity: 0.35,
-    blending: AdditiveBlending,
-    depthWrite: false,
-    sizeAttenuation: true,
-  }), [])
+  const material = useMemo(() => {
+    const t = THEMES[colorTheme] ?? THEMES.dark
+    return new PointsMaterial({
+      color: t.snowColor,
+      size: 0.03,
+      transparent: true,
+      opacity: t.snowOpacity,
+      blending: t.snowBlending === 'normal' ? NormalBlending : AdditiveBlending,
+      depthWrite: false,
+      sizeAttenuation: true,
+    })
+  }, [colorTheme])
+
+  useEffect(() => () => material.dispose(), [material])
 
   useFrame(({ clock }) => {
     if (!pointsRef.current || !sway) return
