@@ -48,26 +48,46 @@ function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
     }
 
     let lastPinchDist = null
-    const onTouchMove = (e) => {
-      if (e.touches.length !== 2) return
-      e.preventDefault()
-      const dx = e.touches[0].clientX - e.touches[1].clientX
-      const dy = e.touches[0].clientY - e.touches[1].clientY
-      const dist = Math.hypot(dx, dy)
-      if (lastPinchDist !== null) {
-        const ratio = dist / lastPinchDist
-        const delta = ratio > 1 ? 0.95 : 1.05
-        zoomRef.current = Math.min(3.5, Math.max(0.45, zoomRef.current * delta))
+    let lastTouchX = null
+    let touchHasMoved = false
+
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        lastTouchX = e.touches[0].clientX
+        touchHasMoved = false
       }
-      lastPinchDist = dist
     }
-    const onTouchEnd = () => { lastPinchDist = null }
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const dist = Math.hypot(dx, dy)
+        if (lastPinchDist !== null) {
+          const ratio = dist / lastPinchDist
+          const delta = ratio > 1 ? 0.95 : 1.05
+          zoomRef.current = Math.min(3.5, Math.max(0.45, zoomRef.current * delta))
+        }
+        lastPinchDist = dist
+      } else if (e.touches.length === 1 && lastTouchX !== null) {
+        const dx = e.touches[0].clientX - lastTouchX
+        if (Math.abs(dx) > 4) touchHasMoved = true
+        if (touchHasMoved) {
+          e.preventDefault()
+          base.current.theta -= dx * 0.008
+        }
+        lastTouchX = e.touches[0].clientX
+      }
+    }
+    const onTouchEnd = () => { lastPinchDist = null; lastTouchX = null; touchHasMoved = false }
 
     window.addEventListener('wheel', onWheel, { passive: false })
+    window.addEventListener('touchstart', onTouchStart)
     window.addEventListener('touchmove', onTouchMove, { passive: false })
     window.addEventListener('touchend', onTouchEnd)
     return () => {
       window.removeEventListener('wheel', onWheel)
+      window.removeEventListener('touchstart', onTouchStart)
       window.removeEventListener('touchmove', onTouchMove)
       window.removeEventListener('touchend', onTouchEnd)
     }
@@ -321,8 +341,9 @@ function ZoomHint({ colorTheme = 'dark' }) {
   )
 }
 
-function OverflowBadge({ total, visible }) {
+function OverflowBadge({ total, visible, colorTheme = 'dark' }) {
   if (!total || total <= visible) return null
+  const isLight = colorTheme === 'light'
   return (
     <div style={{
       position: 'fixed',
@@ -330,13 +351,13 @@ function OverflowBadge({ total, visible }) {
       left: '50%',
       transform: 'translateX(-50%)',
       zIndex: 80,
-      background: 'rgba(6,6,18,0.88)',
-      border: '1px solid rgba(200,140,60,0.35)',
+      background: isLight ? 'rgba(235,242,252,0.92)' : 'rgba(6,6,18,0.88)',
+      border: `1px solid ${isLight ? 'rgba(160,80,0,0.2)' : 'rgba(200,140,60,0.35)'}`,
       borderRadius: 20,
       padding: '3px 12px',
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: 9,
-      color: 'rgba(200,160,80,0.75)',
+      color: isLight ? 'rgba(140,70,0,0.8)' : 'rgba(200,160,80,0.75)',
       letterSpacing: '0.06em',
       pointerEvents: 'none',
       backdropFilter: 'blur(8px)',
@@ -890,7 +911,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
       </div>
       <ZoomHint colorTheme={settings.colorTheme} />
       {capInfo?.capped && (
-        <OverflowBadge total={capInfo.total} visible={capInfo.visible} />
+        <OverflowBadge total={capInfo.total} visible={capInfo.visible} colorTheme={settings.colorTheme} />
       )}
       {onChangeRoot && <ChangeRootButton onClick={onChangeRoot} />}
       <button
@@ -1036,7 +1057,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         activityIndex={settings.activityMode ? (activityData?.byPath ?? null) : null}
         archMode={settings.archMode}
       />
-      <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} />
+      <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} colorTheme={settings.colorTheme} />
       <NodeTooltip
         node={tooltip.node}
         x={tooltip.x}

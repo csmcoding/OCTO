@@ -67,7 +67,7 @@ export default function Breadcrumb({ navStack, onCrumbClick, colorTheme = 'dark'
       zIndex: 120,
       whiteSpace: 'nowrap',
       userSelect: 'none',
-      maxWidth: 'calc(100vw - 320px)',
+      maxWidth: 'calc(100vw - 200px)',
       overflow: 'hidden',
     }}>
       {crumbs.map((crumb, i) => (
