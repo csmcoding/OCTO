@@ -34,6 +34,8 @@ function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
   const lookTarget = useRef(new Vector3(0, 0, 0))
   const rRef = useRef(10)
   const zoomRef = useRef(1.0)
+  const tiltRef = useRef(0)
+  const touchDraggingRef = useRef(false)
   const lastCbRef = useRef(0)
 
   useEffect(() => {
@@ -49,11 +51,13 @@ function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
 
     let lastPinchDist = null
     let lastTouchX = null
+    let lastTouchY = null
     let touchHasMoved = false
 
     const onTouchStart = (e) => {
       if (e.touches.length === 1) {
         lastTouchX = e.touches[0].clientX
+        lastTouchY = e.touches[0].clientY
         touchHasMoved = false
       }
     }
@@ -71,15 +75,22 @@ function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
         lastPinchDist = dist
       } else if (e.touches.length === 1 && lastTouchX !== null) {
         const dx = e.touches[0].clientX - lastTouchX
-        if (Math.abs(dx) > 4) touchHasMoved = true
+        const dy = e.touches[0].clientY - lastTouchY
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) touchHasMoved = true
         if (touchHasMoved) {
           e.preventDefault()
           base.current.theta -= dx * 0.008
+          tiltRef.current = Math.max(-3, Math.min(5, tiltRef.current - dy * 0.018))
+          touchDraggingRef.current = true
         }
         lastTouchX = e.touches[0].clientX
+        lastTouchY = e.touches[0].clientY
       }
     }
-    const onTouchEnd = () => { lastPinchDist = null; lastTouchX = null; touchHasMoved = false }
+    const onTouchEnd = () => {
+      lastPinchDist = null; lastTouchX = null; lastTouchY = null
+      touchHasMoved = false; touchDraggingRef.current = false
+    }
 
     window.addEventListener('wheel', onWheel, { passive: false })
     window.addEventListener('touchstart', onTouchStart)
@@ -94,11 +105,11 @@ function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
   }, [])
 
   useFrame((_, delta) => {
-    if (autoRotate) base.current.theta += delta * 0.08
+    if (autoRotate && !touchDraggingRef.current) base.current.theta += delta * 0.08
 
     const baseR = rRef.current * zoomRef.current
     let tx = Math.sin(base.current.theta) * baseR
-    let ty = 4 * zoomRef.current
+    let ty = (4 + tiltRef.current) * zoomRef.current
     let tz = Math.cos(base.current.theta) * baseR
 
     if (hoveredPosition) {
