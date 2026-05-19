@@ -1,12 +1,12 @@
 export const CLUSTERS = {
-  tests:    { color: '#f6ad55', label: 'Tests'    },
-  config:   { color: '#a78bfa', label: 'Config'   },
+  tests:    { color: '#fb923c', label: 'Tests'    },
+  config:   { color: '#8b5cf6', label: 'Config'   },
   docs:     { color: '#f472b6', label: 'Docs'     },
   scripts:  { color: '#fbbf24', label: 'Scripts'  },
-  assets:   { color: '#e879f9', label: 'Assets'   },
-  data:     { color: '#67e8f9', label: 'Data'     },
-  backend:  { color: '#6ee7b7', label: 'Backend'  },
-  frontend: { color: '#93c5fd', label: 'Frontend' },
+  assets:   { color: '#d946ef', label: 'Assets'   },
+  data:     { color: '#22d3ee', label: 'Data'     },
+  backend:  { color: '#34d399', label: 'Backend'  },
+  frontend: { color: '#60a5fa', label: 'Frontend' },
   other:    { color: '#94a3b8', label: 'Other'    },
 }
 
