@@ -1042,3 +1042,53 @@ visual layer — scene, particles, lights, grid, fresnel, tentacle, ripple, UI c
 - light.uiText === '#1a2a3a' (dark readable on white)
 
 **Next:** PROMPT 36 (or TBD by user)
+
+---
+
+## PROMPT 35 — Future Glass Refinement + Panel/Search/Minimap Polish
+**Completed 2026-05-18**
+
+### What changed
+
+**THEMES.light refinement (palette.js):**
+- fogDensity 0.028 → 0.010 (crispness: dramatically less haze, topology reads clearly)
+- rimPower 3.2 → 5.0, rimIntensity 0.55 → 0.70 (tighter, sharper fresnel edge)
+- colorBoost 0.55 → 0.68 (richer node pigment against bright background)
+- tentacleBase '#c8d4e4' (milky) → '#2a3a5a' (dark slate blue — silver-blue tentacles)
+- tentacleOpacityIdle 0.30 → 0.50 (more structure visible)
+- snowColor '#8ab8d8' → '#b0c8e8' (silver-blue ionized dust feel)
+- snowOpacity 0.38 → 0.50
+- cellColor/sectionColor darkened significantly (charcoal grid anchors)
+- fillLight color → '#6080b0', intensity 0.9 → 0.60 (less milky fill)
+- centerLightIntensity 1.2 → 2.0 (brighter center point)
+
+**Focus mode (NodeMesh + SceneObjects):**
+- Added `isDimmed` prop to NodeMesh; dims uOpacity to 18% when another node is selected
+- SceneObjects passes `isDimmed={selectedNodeId != null && selectedNodeId !== node.id}`
+
+**Node labels (NodeMesh):**
+- Light mode: `textShadow: '0 1px 3px rgba(10,30,60,0.35)'` (crisp on light bg, not glowing)
+- Label font-weight 500 → 600 for both modes
+- Color at full opacity in light mode (was `nodeColor + 'f2'`)
+
+**Micro-chrome theming (ThreeScene):**
+- `KeyboardLegend` accepts `colorTheme` prop; panel, kbd, label all themed
+- `ZoomHint` accepts `colorTheme` prop; themed for light/dark
+- Inline buttons (⚙ ↓ ⬡): derived `chromeBg/chromeBdr/chromeColor` from `isLight`
+- `BackToProjectsButton` accepts `colorTheme` prop; all colors conditional on isLight
+
+**Panel restructure (Panel.jsx):**
+- Outer div now flex column (not overflow scroll)
+- Sticky header: `flexShrink: 0` header section with `borderBottom`
+- Pin/close buttons moved inline into header (no longer absolutely positioned)
+- Scrollable body: `flex: 1, overflowY: auto` inner div
+
+**Minimap canvas (Minimap.jsx):**
+- Spokes, camera line, node labels, center dot, root label all conditional on `isLight`
+- Header bar `background` adapts to light mode
+- All light mode canvas colors use blue-charcoal tones (rgba(0,80,140,...))
+
+**Tests:** All 166 pass; all THEMES.light test constraints preserved
+(rimColor, bg prefix, showStars, blending modes, ambientIntensity ratio, colorBoost, uiText)
+
+**Next:** PROMPT 36 (TBD)

@@ -57,7 +57,7 @@ export default function Minimap({
         ctx.beginPath()
         ctx.moveTo(cx, cy)
         ctx.lineTo(pt.x, pt.y)
-        ctx.strokeStyle = 'rgba(124,157,245,0.08)'
+        ctx.strokeStyle = isLight ? 'rgba(0,80,140,0.10)' : 'rgba(124,157,245,0.08)'
         ctx.lineWidth = 0.5
         ctx.stroke()
       })
@@ -94,8 +94,8 @@ export default function Minimap({
         if (isSel || isHov) {
           ctx.font = "8px 'JetBrains Mono', monospace"
           ctx.fillStyle = isSel
-            ? 'rgba(230,238,255,0.9)'
-            : 'rgba(180,190,220,0.7)'
+            ? (isLight ? 'rgba(20,40,80,0.9)' : 'rgba(230,238,255,0.9)')
+            : (isLight ? 'rgba(30,60,100,0.65)' : 'rgba(180,190,220,0.7)')
           ctx.fillText(node.name, pt.x + r + 3, pt.y + 3)
         }
       })
@@ -103,13 +103,13 @@ export default function Minimap({
       // Center dot (represents currentRoot)
       ctx.beginPath()
       ctx.arc(cx, cy, 4, 0, Math.PI * 2)
-      ctx.fillStyle = 'rgba(200,200,240,0.5)'
+      ctx.fillStyle = isLight ? 'rgba(0,80,120,0.4)' : 'rgba(200,200,240,0.5)'
       ctx.fill()
 
       // Root label
       if (currentRoot?.name) {
         ctx.font = "7px 'JetBrains Mono', monospace"
-        ctx.fillStyle = 'rgba(180,185,230,0.45)'
+        ctx.fillStyle = isLight ? 'rgba(30,60,100,0.4)' : 'rgba(180,185,230,0.45)'
         const label = currentRoot.name
         const tw = ctx.measureText(label).width
         ctx.fillText(label, cx - tw / 2, cy - 8)
@@ -125,16 +125,16 @@ export default function Minimap({
         ctx.beginPath()
         ctx.moveTo(mx, my)
         ctx.lineTo(cx, cy)
-        ctx.strokeStyle = 'rgba(200,210,255,0.12)'
+        ctx.strokeStyle = isLight ? 'rgba(0,80,140,0.10)' : 'rgba(200,210,255,0.12)'
         ctx.lineWidth = 0.6
         ctx.stroke()
 
         // Camera eye dot
         ctx.beginPath()
         ctx.arc(mx, my, 3, 0, Math.PI * 2)
-        ctx.fillStyle = 'rgba(200,210,255,0.55)'
+        ctx.fillStyle = isLight ? 'rgba(0,80,140,0.45)' : 'rgba(200,210,255,0.55)'
         ctx.fill()
-        ctx.strokeStyle = 'rgba(200,210,255,0.35)'
+        ctx.strokeStyle = isLight ? 'rgba(0,80,140,0.3)' : 'rgba(200,210,255,0.35)'
         ctx.lineWidth = 0.8
         ctx.stroke()
       }
@@ -219,7 +219,7 @@ export default function Minimap({
         padding: '5px 8px 4px',
         borderBottom: '1px solid rgba(124,157,245,0.07)',
         zIndex: 2,
-        background: 'rgba(6,6,18,0.5)',
+        background: isLight ? 'rgba(220,230,245,0.5)' : 'rgba(6,6,18,0.5)',
       }}>
         <span style={{
           fontFamily: "'JetBrains Mono', monospace",
