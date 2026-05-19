@@ -392,8 +392,8 @@ function formatAgeDays(isoString) {
 
 const LEVEL_COLORS = {
   hot:   '#ff6b35',
-  warm:  '#c8a020',
-  cool:  '#4a9090',
+  warm:  '#d4a828',
+  cool:  '#2eb8c0',
   stale: '#555570',
 }
 
@@ -451,8 +451,8 @@ function ActivityMetaRow({ label, value, pc }) {
 
 const LEVEL_DISPLAY = {
   hot:   { label: 'Active today',      color: '#ff6b35' },
-  warm:  { label: 'Active this week',  color: '#c8a020' },
-  cool:  { label: 'Active this month', color: '#4a9090' },
+  warm:  { label: 'Active this week',  color: '#d4a828' },
+  cool:  { label: 'Active this month', color: '#2eb8c0' },
   stale: { label: 'Quiet',             color: null },
 }
 

@@ -37,7 +37,7 @@ function getSearchColors(colorTheme) {
   }
 }
 
-const ACT_COLORS = { hot: '#ff6b35', warm: '#c8a020', cool: '#4a9090' }
+const ACT_COLORS = { hot: '#ff6b35', warm: '#d4a828', cool: '#2eb8c0' }
 const ACT_LABELS = { hot: 'today', warm: 'this week', cool: 'this month' }
 
 const CHIPS = [

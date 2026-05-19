@@ -2,8 +2,8 @@ const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 
 const LEGEND_ITEMS = [
   { key: 'hot',   color: '#ff6b35', label: 'Active today'      },
-  { key: 'warm',  color: '#c8a020', label: 'Active this week'  },
-  { key: 'cool',  color: '#4a9090', label: 'Active this month' },
+  { key: 'warm',  color: '#d4a828', label: 'Active this week'  },
+  { key: 'cool',  color: '#2eb8c0', label: 'Active this month' },
   { key: null,    color: '#e8a020', label: 'Dirty'              },
   { key: 'stale', color: '#555570', label: 'Quiet / stale'     },
 ]

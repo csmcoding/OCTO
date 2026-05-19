@@ -16,7 +16,7 @@ export function getTooltipLines(node) {
   }
 }
 
-const ACT_COLORS = { hot: '#ff6b35', warm: '#c8a020', cool: '#4a9090', stale: '#555570' }
+const ACT_COLORS = { hot: '#ff6b35', warm: '#d4a828', cool: '#2eb8c0', stale: '#555570' }
 const ACT_LABELS = { hot: 'active today', warm: 'active this week', cool: 'active this month', stale: 'quiet' }
 
 export default function NodeTooltip({ node, x, y, activityLevel = null }) {

@@ -91,14 +91,14 @@ function ActivityAura({ level, isDirty, index, colorTheme = 'dark' }) {
   const meshRef = useRef()
   const color = isDirty   ? '#e8a020'
     : level === 'hot'     ? '#ff6b35'
-    : level === 'warm'    ? '#c8a020'
-    : level === 'cool'    ? '#4a9090'
+    : level === 'warm'    ? '#d4a828'
+    : level === 'cool'    ? '#2eb8c0'
     : '#444466'
 
-  const baseOpacity = isDirty   ? 0.32
-    : level === 'hot'  ? 0.28
-    : level === 'warm' ? 0.16
-    : level === 'cool' ? 0.08
+  const baseOpacity = isDirty   ? 0.42
+    : level === 'hot'  ? 0.38
+    : level === 'warm' ? 0.30
+    : level === 'cool' ? 0.18
     : 0.03
 
   const doPulse = isDirty || level === 'hot'
