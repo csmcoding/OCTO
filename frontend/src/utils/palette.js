@@ -2,6 +2,63 @@ import { getActiveSignals } from './signals'
 
 const ALERT_SIGNALS = new Set(['gitDirty', 'gitUnpushed'])
 
+export const THEMES = {
+  dark: {
+    bg: '#0d1018', fogColor: '#111827', fogDensity: 0.026,
+    ambientColor: '#d8e6ff', ambientIntensity: 0.16,
+    centerLight: '#6ee7dc', centerLightIntensity: 2.1,
+    topLight: '#ffffff', topLightIntensity: 0.85,
+    sideLight: '#7aa2ff', sideLightIntensity: 0.45,
+    fillLight: '#314a9f', fillLightIntensity: 0.72,
+    cellColor: '#1e2040', sectionColor: '#2e3055',
+    rimColor: '#a8f0ee', rimPower: 2.5, rimIntensity: 0.7, colorBoost: 0.4,
+    snowColor: '#4ecdc4', snowOpacity: 0.35, snowBlending: 'additive',
+    tentacleBase: '#0d1320', tentacleEmissiveIdle: 0.10, tentacleEmissiveHover: 0.14,
+    tentacleOpacityIdle: 0.58, tentacleOpacityHover: 0.88,
+    rippleColor: '#4ecdc4', rippleBlending: 'additive', rippleMaxOpacity: 0.7,
+    showStars: true,
+    uiBg: 'rgba(6,6,18,0.97)', uiBorder: 'rgba(124,157,245,0.18)',
+    uiText: '#e2e2f2', uiTextMuted: 'rgba(160,160,200,0.65)', uiTextFaint: 'rgba(110,110,158,0.5)',
+    uiAccent: '#7c9df5', uiActiveRow: 'rgba(78,205,196,0.06)',
+  },
+  deepspace: {
+    bg: '#090b12', fogColor: '#0b1020', fogDensity: 0.038,
+    ambientColor: '#b0c8e8', ambientIntensity: 0.12,
+    centerLight: '#60c8dc', centerLightIntensity: 1.8,
+    topLight: '#e8f0ff', topLightIntensity: 0.7,
+    sideLight: '#5080cc', sideLightIntensity: 0.35,
+    fillLight: '#1a2860', fillLightIntensity: 0.55,
+    cellColor: '#141428', sectionColor: '#202040',
+    rimColor: '#8090f0', rimPower: 2.8, rimIntensity: 0.65, colorBoost: 0.4,
+    snowColor: '#3080c0', snowOpacity: 0.28, snowBlending: 'additive',
+    tentacleBase: '#060812', tentacleEmissiveIdle: 0.08, tentacleEmissiveHover: 0.12,
+    tentacleOpacityIdle: 0.50, tentacleOpacityHover: 0.85,
+    rippleColor: '#5090d0', rippleBlending: 'additive', rippleMaxOpacity: 0.6,
+    showStars: true,
+    uiBg: 'rgba(4,4,14,0.97)', uiBorder: 'rgba(100,130,220,0.18)',
+    uiText: '#d0d8f0', uiTextMuted: 'rgba(140,160,220,0.65)', uiTextFaint: 'rgba(80,100,180,0.5)',
+    uiAccent: '#6080e0', uiActiveRow: 'rgba(60,100,200,0.06)',
+  },
+  light: {
+    bg: '#e8edf5', fogColor: '#d4dce9', fogDensity: 0.028,
+    ambientColor: '#c8d8f0', ambientIntensity: 1.4,
+    centerLight: '#6ee7dc', centerLightIntensity: 1.2,
+    topLight: '#f8faff', topLightIntensity: 0.6,
+    sideLight: '#80b0d8', sideLightIntensity: 0.35,
+    fillLight: '#a0c8e8', fillLightIntensity: 0.9,
+    cellColor: '#b8cce0', sectionColor: '#a0b8d4',
+    rimColor: '#006080', rimPower: 3.2, rimIntensity: 0.55, colorBoost: 0.55,
+    snowColor: '#8ab8d8', snowOpacity: 0.38, snowBlending: 'normal',
+    tentacleBase: '#c8d4e4', tentacleEmissiveIdle: 0.04, tentacleEmissiveHover: 0.08,
+    tentacleOpacityIdle: 0.30, tentacleOpacityHover: 0.65,
+    rippleColor: '#00a8c8', rippleBlending: 'normal', rippleMaxOpacity: 0.5,
+    showStars: false,
+    uiBg: 'rgba(240,245,252,0.88)', uiBorder: 'rgba(0,100,140,0.14)',
+    uiText: '#1a2a3a', uiTextMuted: 'rgba(30,60,100,0.55)', uiTextFaint: 'rgba(30,60,100,0.32)',
+    uiAccent: '#006080', uiActiveRow: 'rgba(0,100,140,0.09)',
+  },
+}
+
 export const PALETTE = {
   // Scene backgrounds
   void:          '#03030a',

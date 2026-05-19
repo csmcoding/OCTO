@@ -9,6 +9,45 @@ import { getActivityLevel } from '../utils/activityAggregate'
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
 
+function getPanelColors(colorTheme) {
+  const l = colorTheme === 'light'
+  return {
+    bg:             l ? 'rgba(240,245,252,0.92)' : '#0f0f14',
+    border:         l ? 'rgba(0,100,140,0.15)'   : 'rgba(78,205,196,0.15)',
+    shadow:         l ? '-6px 0 20px rgba(0,60,100,0.1)' : '-8px 0 32px rgba(0,0,0,0.4)',
+    textPrimary:    l ? '#1a2a3a'                : '#f0f0f8',
+    textMuted:      l ? 'rgba(30,60,100,0.55)'  : 'rgba(120,120,175,0.55)',
+    textLabel:      l ? 'rgba(30,60,100,0.45)'  : 'rgba(120,120,175,0.55)',
+    sep:            l ? 'rgba(0,100,140,0.08)'  : 'rgba(124,157,245,0.08)',
+    chipBg:         l ? 'rgba(0,100,140,0.06)'  : 'rgba(0,0,0,0.3)',
+    chipBorder:     l ? 'rgba(0,100,140,0.14)'  : 'rgba(78,205,196,0.18)',
+    chipText:       l ? '#1a2a3a'                : '#e2e2f2',
+    chipLabel:      l ? 'rgba(30,60,100,0.5)'   : 'rgba(120,120,175,0.6)',
+    signalHover:    l ? 'rgba(0,100,140,0.06)'  : 'rgba(78,205,196,0.06)',
+    previewBg:      l ? 'rgba(240,245,252,0.7)' : '#0a0a12',
+    previewBorder:  l ? 'rgba(0,100,140,0.12)'  : 'rgba(78,205,196,0.12)',
+    previewText:    l ? 'rgba(30,60,100,0.8)'   : 'rgba(200,210,240,0.75)',
+    previewLineNum: l ? 'rgba(30,60,100,0.3)'   : 'rgba(120,120,175,0.3)',
+    diffBg:         l ? 'rgba(0,100,140,0.04)'  : 'rgba(0,0,0,0.35)',
+    diffBorder:     l ? 'rgba(0,100,140,0.08)'  : 'rgba(124,157,245,0.1)',
+    diffNeutral:    l ? 'rgba(30,60,100,0.5)'   : 'rgba(160,160,200,0.45)',
+    actionBg:       l ? 'rgba(0,100,140,0.04)'  : 'rgba(78,205,196,0.05)',
+    actionBgHov:    l ? 'rgba(0,100,140,0.09)'  : 'rgba(78,205,196,0.12)',
+    actionBorder:   l ? 'rgba(0,100,140,0.14)'  : 'rgba(78,205,196,0.18)',
+    actionBorderHov:l ? 'rgba(0,100,140,0.35)'  : 'rgba(78,205,196,0.4)',
+    actionColor:    l ? 'rgba(30,60,100,0.6)'   : 'rgba(120,120,175,0.8)',
+    actionColorHov: l ? '#006080'               : '#4ecdc4',
+    altBg:          l ? 'rgba(0,100,140,0.04)'  : 'rgba(124,157,245,0.05)',
+    altBgHov:       l ? 'rgba(0,100,140,0.08)'  : 'rgba(124,157,245,0.12)',
+    altBorder:      l ? 'rgba(0,100,140,0.12)'  : 'rgba(124,157,245,0.18)',
+    altBorderHov:   l ? 'rgba(0,100,140,0.3)'   : 'rgba(124,157,245,0.4)',
+    clean:          l ? '#006040'               : '#3dffa0',
+    openBtn:        l ? 'rgba(0,100,140,0.7)'   : 'rgba(78,205,196,0.7)',
+    actLabel:       l ? 'rgba(30,60,100,0.45)'  : 'rgba(110,110,158,0.55)',
+    actValue:       l ? 'rgba(30,60,100,0.8)'   : 'rgba(190,195,230,0.75)',
+  }
+}
+
 const EXT_LANG = {
   js: 'javascript', mjs: 'javascript', cjs: 'javascript',
   jsx: 'jsx', ts: 'typescript', tsx: 'tsx',
@@ -113,16 +152,16 @@ function usePanelPreview(node) {
   return state
 }
 
-function MetricChip({ icon, value, label }) {
+function MetricChip({ icon, value, label, pc }) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', alignItems: 'center',
-      background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(78,205,196,0.18)',
+      background: pc.chipBg, border: `1px solid ${pc.chipBorder}`,
       borderRadius: 8, padding: '6px 10px', minWidth: 52, gap: 2,
     }}>
       <span style={{ fontSize: 11 }}>{icon}</span>
-      <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: '#e2e2f2', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-      <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.6)', letterSpacing: '0.04em' }}>{label}</span>
+      <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700, color: pc.chipText, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      <span style={{ fontFamily: MONO, fontSize: 9, color: pc.chipLabel, letterSpacing: '0.04em' }}>{label}</span>
     </div>
   )
 }
@@ -134,7 +173,7 @@ const SIGNAL_HUMAN = {
   deepNesting: 'Deep nesting',
 }
 
-function SignalRow({ signalKey }) {
+function SignalRow({ signalKey, pc }) {
   const [hov, setHov] = useState(false)
   const color = SIGNAL_COLORS[signalKey] ?? '#888'
   return (
@@ -144,7 +183,7 @@ function SignalRow({ signalKey }) {
       style={{
         display: 'flex', alignItems: 'center', gap: 8,
         padding: '4px 6px', borderRadius: 6, marginBottom: 1,
-        background: hov ? 'rgba(78,205,196,0.06)' : 'transparent',
+        background: hov ? pc.signalHover : 'transparent',
         transition: 'background 0.12s',
       }}
     >
@@ -156,7 +195,7 @@ function SignalRow({ signalKey }) {
   )
 }
 
-function FilePreviewSection({ node }) {
+function FilePreviewSection({ node, pc }) {
   const preview = usePanelPreview(node)
   const [prism, setPrism] = useState(null)
   const [highlighted, setHighlighted] = useState([])
@@ -207,8 +246,8 @@ function FilePreviewSection({ node }) {
       {preview.content != null && !preview.loading && (
         <>
           <div style={{
-            background: '#0a0a12',
-            border: '1px solid rgba(78,205,196,0.12)',
+            background: pc.previewBg,
+            border: `1px solid ${pc.previewBorder}`,
             borderRadius: 6, padding: '8px 0',
             maxHeight: 240, overflowY: 'auto', overflowX: 'auto',
           }}>
@@ -219,7 +258,7 @@ function FilePreviewSection({ node }) {
                 <div key={i} style={{ display: 'flex', lineHeight: 1.6, minHeight: '1.6em' }}>
                   <span style={{
                     fontFamily: MONO, fontSize: 10,
-                    color: 'rgba(120,120,175,0.3)', userSelect: 'none',
+                    color: pc.previewLineNum, userSelect: 'none',
                     flexShrink: 0, width: 28, textAlign: 'right',
                     paddingRight: 10, fontVariantNumeric: 'tabular-nums',
                   }}>{i + 1}</span>
@@ -230,7 +269,7 @@ function FilePreviewSection({ node }) {
                       dangerouslySetInnerHTML={{ __html: htmlLine || ' ' }}
                     />
                   ) : (
-                    <span style={{ fontFamily: MONO, fontSize: 10.5, color: 'rgba(200,210,240,0.75)', whiteSpace: 'pre' }}>
+                    <span style={{ fontFamily: MONO, fontSize: 10.5, color: pc.previewText, whiteSpace: 'pre' }}>
                       {rawLine || ' '}
                     </span>
                   )}
@@ -247,12 +286,12 @@ function FilePreviewSection({ node }) {
             onClick={handleOpenInEditor}
             style={{
               marginTop: 8, background: 'none', border: 'none', padding: 0,
-              color: openStatus === 'ok' ? '#3dffa0' : openStatus === 'error' ? '#ff4466' : 'rgba(78,205,196,0.7)',
+              color: openStatus === 'ok' ? '#3dffa0' : openStatus === 'error' ? '#ff4466' : pc.openBtn,
               fontFamily: MONO, fontSize: 11, cursor: 'pointer',
               transition: 'color 0.15s',
             }}
-            onMouseEnter={e => { if (openStatus === 'idle') e.currentTarget.style.color = '#4ecdc4' }}
-            onMouseLeave={e => { if (openStatus === 'idle') e.currentTarget.style.color = 'rgba(78,205,196,0.7)' }}
+            onMouseEnter={e => { if (openStatus === 'idle') e.currentTarget.style.color = pc.actionColorHov }}
+            onMouseLeave={e => { if (openStatus === 'idle') e.currentTarget.style.color = pc.openBtn }}
           >
             {openStatus === 'opening' ? 'opening…' : openStatus === 'ok' ? '✓ opened' : openStatus === 'error' ? '✗ failed' : 'Open in editor →'}
           </button>
@@ -262,19 +301,19 @@ function FilePreviewSection({ node }) {
   )
 }
 
-function GitDiffSection({ gitDiff }) {
+function GitDiffSection({ gitDiff, pc }) {
   return (
     <div style={{ marginTop: 16 }}>
-      <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+      <div style={{ fontFamily: MONO, fontSize: 9, color: pc.textLabel, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
         Git Changes
       </div>
-      {gitDiff.loading && <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(120,120,175,0.4)' }}>loading…</div>}
+      {gitDiff.loading && <div style={{ fontFamily: MONO, fontSize: 10, color: pc.textMuted }}>loading…</div>}
       {gitDiff.summary && (
-        <div style={{ fontFamily: MONO, fontSize: 10, color: 'rgba(200,200,230,0.6)', marginBottom: 6, lineHeight: 1.5 }}>{gitDiff.summary}</div>
+        <div style={{ fontFamily: MONO, fontSize: 10, color: pc.actValue, marginBottom: 6, lineHeight: 1.5 }}>{gitDiff.summary}</div>
       )}
       {gitDiff.diff && gitDiff.diff.length > 0 && (
         <div style={{
-          background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(124,157,245,0.1)',
+          background: pc.diffBg, border: `1px solid ${pc.diffBorder}`,
           borderRadius: 6, padding: '6px 10px', maxHeight: 140, overflowY: 'auto',
         }}>
           {gitDiff.diff.map((line, i) => {
@@ -287,7 +326,7 @@ function GitDiffSection({ gitDiff }) {
                 color: isAdd  ? 'rgba(78,205,196,0.8)'
                      : isDel  ? 'rgba(255,107,107,0.7)'
                      : isHunk ? 'rgba(124,157,245,0.6)'
-                     :          'rgba(160,160,200,0.45)',
+                     :          pc.diffNeutral,
                 whiteSpace: 'pre', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
               }}>{line || ' '}</div>
             )
@@ -388,14 +427,14 @@ function ActivityStrip({ display }) {
   )
 }
 
-function ActivityMetaRow({ label, value }) {
+function ActivityMetaRow({ label, value, pc }) {
   return (
     <div style={{ display: 'flex', gap: 6, marginBottom: 3, lineHeight: 1.4 }}>
-      <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(110,110,158,0.55)', minWidth: 66, flexShrink: 0 }}>
+      <span style={{ fontFamily: MONO, fontSize: 9, color: pc.actLabel, minWidth: 66, flexShrink: 0 }}>
         {label}
       </span>
       <span style={{
-        fontFamily: MONO, fontSize: 9, color: 'rgba(190,195,230,0.75)',
+        fontFamily: MONO, fontSize: 9, color: pc.actValue,
         wordBreak: 'break-all', overflow: 'hidden',
         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
       }}>
@@ -405,7 +444,7 @@ function ActivityMetaRow({ label, value }) {
   )
 }
 
-function ActivitySection({ activityItem, activityMode }) {
+function ActivitySection({ activityItem, activityMode, pc }) {
   if (!activityMode) return null
   const display = buildActivityDisplay(activityItem)
 
@@ -416,7 +455,7 @@ function ActivitySection({ activityItem, activityMode }) {
     <div style={{ marginBottom: 16 }}>
       <div style={{
         fontFamily: MONO, fontSize: 9,
-        color: 'rgba(120,120,175,0.55)',
+        color: pc.textLabel,
         letterSpacing: '0.1em', textTransform: 'uppercase',
         marginBottom: 8,
       }}>
@@ -424,7 +463,7 @@ function ActivitySection({ activityItem, activityMode }) {
       </div>
 
       {!display.available ? (
-        <span style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(120,120,175,0.4)' }}>
+        <span style={{ fontFamily: MONO, fontSize: 11, color: pc.textMuted }}>
           No git activity available
         </span>
       ) : (
@@ -444,13 +483,13 @@ function ActivitySection({ activityItem, activityMode }) {
           {/* Commit metadata */}
           {display.lastCommitAt && (
             <div>
-              <ActivityMetaRow label="last commit"  value={formatAgeDays(display.lastCommitAt)} />
-              {display.author            && <ActivityMetaRow label="author"      value={display.author} />}
-              {display.lastCommitSha     && <ActivityMetaRow label="sha"         value={display.lastCommitSha} />}
-              {display.lastCommitMessage && <ActivityMetaRow label="message"     value={display.lastCommitMessage} />}
-              <ActivityMetaRow label="7d commits"  value={display.commitCount7d} />
-              <ActivityMetaRow label="30d commits" value={display.commitCount30d} />
-              {display.isDirty && <ActivityMetaRow label="status" value="dirty — unstaged changes" />}
+              <ActivityMetaRow label="last commit"  value={formatAgeDays(display.lastCommitAt)} pc={pc} />
+              {display.author            && <ActivityMetaRow label="author"      value={display.author} pc={pc} />}
+              {display.lastCommitSha     && <ActivityMetaRow label="sha"         value={display.lastCommitSha} pc={pc} />}
+              {display.lastCommitMessage && <ActivityMetaRow label="message"     value={display.lastCommitMessage} pc={pc} />}
+              <ActivityMetaRow label="7d commits"  value={display.commitCount7d} pc={pc} />
+              <ActivityMetaRow label="30d commits" value={display.commitCount30d} pc={pc} />
+              {display.isDirty && <ActivityMetaRow label="status" value="dirty — unstaged changes" pc={pc} />}
             </div>
           )}
 
@@ -474,7 +513,9 @@ export default function Panel({
   rootPath,
   activityMode = false,
   activityItem = null,
+  colorTheme = 'dark',
 }) {
+  const pc = getPanelColors(colorTheme)
   const [mounted, setMounted]     = useState(false)
   const [openStatus, setOpenStatus] = useState({})
   const [hoverBtn, setHoverBtn]   = useState(null)
@@ -529,12 +570,12 @@ export default function Panel({
     <div style={{
       position: 'fixed', right: 0, top: 0, bottom: 0,
       width: 320,
-      background: '#0f0f14',
-      borderLeft: '1px solid rgba(78,205,196,0.15)',
+      background: pc.bg,
+      borderLeft: `1px solid ${pc.border}`,
       zIndex: 500,
       overflowY: 'auto',
       padding: '20px 16px 32px',
-      boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+      boxShadow: pc.shadow,
       fontFamily: SANS,
       transform: mounted ? 'translateX(0)' : 'translateX(100%)',
       transition: 'transform 240ms cubic-bezier(0.16,1,0.3,1)',
@@ -544,7 +585,7 @@ export default function Panel({
       <div style={{ paddingRight: 56, marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
           <span style={{
-            fontSize: 18, fontWeight: 700, color: '#f0f0f8',
+            fontSize: 18, fontWeight: 700, color: pc.textPrimary,
             letterSpacing: '-0.02em',
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
           }}>
@@ -558,7 +599,7 @@ export default function Panel({
             borderRadius: 4, padding: '1px 6px', flexShrink: 0,
           }}>{typeBadge}</span>
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(120,120,175,0.55)', wordBreak: 'break-all', lineHeight: 1.5 }}>
+        <div style={{ fontFamily: MONO, fontSize: 11, color: pc.textMuted, wordBreak: 'break-all', lineHeight: 1.5 }}>
           {relPath}
         </div>
       </div>
@@ -584,58 +625,58 @@ export default function Panel({
         style={{
           position: 'absolute', top: 14, right: 14,
           background: 'none', border: 'none',
-          color: 'rgba(120,120,175,0.45)', fontSize: 18,
+          color: pc.textMuted, fontSize: 18,
           cursor: 'pointer', lineHeight: 1, padding: '0 2px',
           transition: 'color 0.12s',
         }}
-        onMouseEnter={e => e.currentTarget.style.color = '#e2e2f2'}
-        onMouseLeave={e => e.currentTarget.style.color = 'rgba(120,120,175,0.45)'}
+        onMouseEnter={e => e.currentTarget.style.color = pc.textPrimary}
+        onMouseLeave={e => e.currentTarget.style.color = pc.textMuted}
       >×</button>
 
-      <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '0 0 14px' }} />
+      <div style={{ height: 1, background: pc.sep, margin: '0 0 14px' }} />
 
       {/* ── SECTION 2: METRICS ROW ──────────────────────── */}
       {metrics.length > 0 && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-          {metrics.map(m => <MetricChip key={m.label} icon={m.icon} value={m.value} label={m.label} />)}
+          {metrics.map(m => <MetricChip key={m.label} icon={m.icon} value={m.value} label={m.label} pc={pc} />)}
         </div>
       )}
 
       {/* ── SECTION 3: SIGNAL LIST ──────────────────────── */}
       <div style={{ marginBottom: 16 }}>
         {activeSignals.length === 0 ? (
-          <span style={{ fontFamily: MONO, fontSize: 11, color: '#3dffa0' }}>✓ Clean</span>
+          <span style={{ fontFamily: MONO, fontSize: 11, color: pc.clean }}>✓ Clean</span>
         ) : (
           <>
-            <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+            <div style={{ fontFamily: MONO, fontSize: 9, color: pc.textLabel, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
               Active Signals
             </div>
-            {activeSignals.map(key => <SignalRow key={key} signalKey={key} />)}
+            {activeSignals.map(key => <SignalRow key={key} signalKey={key} pc={pc} />)}
           </>
         )}
       </div>
 
       {/* ── SECTION 4: FILE PREVIEW ─────────────────────── */}
-      {node.type === 'file' && <FilePreviewSection node={node} />}
+      {node.type === 'file' && <FilePreviewSection node={node} pc={pc} />}
 
       {/* Git diff (retained — useful for nodes with git signals) */}
       {(activeSignals.includes('gitDirty') || activeSignals.includes('gitUnpushed')) && (
-        <GitDiffSection gitDiff={gitDiff} />
+        <GitDiffSection gitDiff={gitDiff} pc={pc} />
       )}
 
       {/* ── SECTION 4b: ACTIVITY ────────────────────────── */}
       {activityMode && (
         <>
-          <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '16px 0 12px' }} />
-          <ActivitySection activityItem={activityItem} activityMode={activityMode} />
+          <div style={{ height: 1, background: pc.sep, margin: '16px 0 12px' }} />
+          <ActivitySection activityItem={activityItem} activityMode={activityMode} pc={pc} />
         </>
       )}
 
-      <div style={{ height: 1, background: 'rgba(124,157,245,0.08)', margin: '16px 0 12px' }} />
+      <div style={{ height: 1, background: pc.sep, margin: '16px 0 12px' }} />
 
       {/* ── SECTION 5: ACTIONS ROW ──────────────────────── */}
       <div>
-        <div style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(120,120,175,0.55)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
+        <div style={{ fontFamily: MONO, fontSize: 9, color: pc.textLabel, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
           Actions
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -646,9 +687,9 @@ export default function Panel({
               style={{
                 fontFamily: MONO, fontSize: 11,
                 padding: '5px 10px', borderRadius: 6,
-                background: hoverBtn === key ? 'rgba(78,205,196,0.12)' : 'rgba(78,205,196,0.05)',
-                border: `1px solid ${hoverBtn === key ? 'rgba(78,205,196,0.4)' : 'rgba(78,205,196,0.18)'}`,
-                color: key === 'copy' && copiedPath ? '#3dffa0' : hoverBtn === key ? '#4ecdc4' : 'rgba(120,120,175,0.8)',
+                background: hoverBtn === key ? pc.actionBgHov : pc.actionBg,
+                border: `1px solid ${hoverBtn === key ? pc.actionBorderHov : pc.actionBorder}`,
+                color: key === 'copy' && copiedPath ? pc.clean : hoverBtn === key ? pc.actionColorHov : pc.actionColor,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
                 transition: 'background 0.12s, border-color 0.12s, color 0.12s',
               }}
@@ -671,9 +712,9 @@ export default function Panel({
                   style={{
                     fontFamily: MONO, fontSize: 11,
                     padding: '5px 10px', borderRadius: 6,
-                    background: hoverBtn === key ? 'rgba(124,157,245,0.12)' : 'rgba(124,157,245,0.05)',
-                    border: `1px solid ${hoverBtn === key ? 'rgba(124,157,245,0.4)' : 'rgba(124,157,245,0.18)'}`,
-                    color: hoverBtn === key ? '#e2e2f2' : st.color,
+                    background: hoverBtn === key ? pc.altBgHov : pc.altBg,
+                    border: `1px solid ${hoverBtn === key ? pc.altBorderHov : pc.altBorder}`,
+                    color: hoverBtn === key ? pc.textPrimary : st.color,
                     cursor: 'pointer',
                     transition: 'background 0.12s, border-color 0.12s, color 0.12s',
                   }}

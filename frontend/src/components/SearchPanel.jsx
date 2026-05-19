@@ -5,6 +5,35 @@ import { getActiveSignals, SIGNAL_COLORS } from '../utils/signals.js'
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
 
+function getSearchColors(colorTheme) {
+  const l = colorTheme === 'light'
+  return {
+    overlay:        l ? 'rgba(180,200,220,0.35)' : 'rgba(3,6,12,0.52)',
+    dialogBg:       l ? 'rgba(240,245,252,0.97)' : '#151823',
+    dialogBorder:   l ? 'rgba(0,100,140,0.14)'   : 'rgba(110,231,220,0.12)',
+    dialogShadow:   l ? '0 24px 80px rgba(0,60,100,0.15)' : '0 24px 80px rgba(0,0,0,0.55)',
+    divider:        l ? 'rgba(0,100,140,0.08)'   : 'rgba(110,231,220,0.07)',
+    inputText:      l ? '#1a2a3a'                : 'rgba(230,238,255,0.95)',
+    inputCaret:     l ? '#006080'               : '#4ecdc4',
+    inputBtnColor:  l ? 'rgba(30,60,100,0.4)'   : 'rgba(220,230,245,0.35)',
+    inputBtnHov:    l ? 'rgba(30,60,100,0.9)'   : 'rgba(220,230,245,0.8)',
+    chipActiveBg:   l ? 'rgba(0,100,140,0.12)'  : 'rgba(78,205,196,0.14)',
+    chipActiveBorder:l? 'rgba(0,100,140,0.5)'   : 'rgba(78,205,196,0.55)',
+    chipActiveText: l ? '#006080'               : '#6ee7dc',
+    chipIdleBg:     l ? 'rgba(0,100,140,0.03)'  : 'rgba(255,255,255,0.03)',
+    chipIdleBorder: l ? 'rgba(0,100,140,0.14)'  : 'rgba(110,231,220,0.14)',
+    chipIdleText:   l ? 'rgba(30,60,100,0.55)'  : 'rgba(220,230,245,0.55)',
+    rowActiveBg:    l ? 'rgba(0,100,140,0.09)'  : 'rgba(110,231,220,0.12)',
+    rowActiveBorder:l ? 'rgba(0,100,140,0.5)'   : 'rgba(78,205,196,0.7)',
+    rowNameActive:  l ? '#1a2a3a'               : '#f0f4ff',
+    rowNameIdle:    l ? 'rgba(30,60,100,0.8)'   : 'rgba(220,230,245,0.9)',
+    rowPath:        l ? 'rgba(30,60,100,0.5)'   : 'rgba(220,230,245,0.45)',
+    rowMatch:       l ? 'rgba(0,100,140,0.5)'   : 'rgba(110,231,220,0.4)',
+    emptyText:      l ? 'rgba(30,60,100,0.5)'   : 'rgba(220,230,245,0.35)',
+    hintText:       l ? 'rgba(30,60,100,0.3)'   : 'rgba(220,230,245,0.25)',
+  }
+}
+
 const CHIPS = [
   { id: 'all',     label: 'All',     typeFilter: null,     signalFilter: null      },
   { id: 'folders', label: 'Folders', typeFilter: 'folder', signalFilter: null      },
@@ -55,7 +84,7 @@ function SignalDots({ node }) {
   )
 }
 
-function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick }) {
+function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, sc }) {
   const { node, matchReason } = result
   const path = relPath(node.path, rootPath)
   const displayPath = path.length > 60 ? '…' + path.slice(-60) : path
@@ -69,11 +98,11 @@ function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick }) {
       style={{
         padding: '9px 16px',
         cursor: 'pointer',
-        background: isActive ? 'rgba(110,231,220,0.12)' : 'transparent',
-        borderLeft: isActive ? '2px solid rgba(78,205,196,0.7)' : '2px solid transparent',
+        background: isActive ? sc.rowActiveBg : 'transparent',
+        borderLeft: isActive ? `2px solid ${sc.rowActiveBorder}` : '2px solid transparent',
         display: 'flex', alignItems: 'flex-start', gap: 10,
         transition: 'background 0.08s',
-        boxShadow: isActive ? 'inset 0 0 12px rgba(78,205,196,0.04)' : 'none',
+        boxShadow: 'none',
       }}
     >
       {/* Icon */}
@@ -86,7 +115,7 @@ function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           <span style={{
             fontFamily: SANS, fontSize: 13, fontWeight: 600,
-            color: isActive ? '#f0f4ff' : 'rgba(220,230,245,0.9)',
+            color: isActive ? sc.rowNameActive : sc.rowNameIdle,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
             {node.name}
@@ -95,7 +124,7 @@ function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick }) {
         </div>
         <div style={{
           fontFamily: MONO, fontSize: 10,
-          color: 'rgba(220,230,245,0.45)',
+          color: sc.rowPath,
           marginTop: 2,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           maxWidth: '100%',
@@ -108,7 +137,7 @@ function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick }) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
         <SignalDots node={node} />
         {matchReason && (
-          <span style={{ fontFamily: MONO, fontSize: 9, color: 'rgba(110,231,220,0.4)', whiteSpace: 'nowrap' }}>
+          <span style={{ fontFamily: MONO, fontSize: 9, color: sc.rowMatch, whiteSpace: 'nowrap' }}>
             {matchReason}
           </span>
         )}
@@ -124,6 +153,7 @@ export default function SearchPanel({
   onClose,
   onSelectNode,
   onDrillToNode,
+  colorTheme = 'dark',
 }) {
   const [query, setQuery]           = useState('')
   const [activeChip, setActiveChip] = useState('all')
@@ -208,6 +238,7 @@ export default function SearchPanel({
   const hasQuery   = query.length > 0
   const hasResults = results.length > 0
   const rootPath   = currentRoot?.path
+  const sc         = getSearchColors(colorTheme)
 
   return (
     <div
@@ -218,7 +249,7 @@ export default function SearchPanel({
         alignItems: 'flex-start',
         justifyContent: 'center',
         paddingTop: '10vh',
-        background: 'rgba(3,6,12,0.52)',
+        background: sc.overlay,
         backdropFilter: 'blur(4px)',
         WebkitBackdropFilter: 'blur(4px)',
       }}
@@ -231,9 +262,9 @@ export default function SearchPanel({
         aria-label="Node search"
         style={{
           width: '92vw', maxWidth: 640,
-          background: '#151823',
-          border: '1px solid rgba(110,231,220,0.12)',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(78,205,196,0.06)',
+          background: sc.dialogBg,
+          border: `1px solid ${sc.dialogBorder}`,
+          boxShadow: sc.dialogShadow,
           borderRadius: 18,
           overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
@@ -244,7 +275,7 @@ export default function SearchPanel({
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '14px 18px',
-          borderBottom: '1px solid rgba(110,231,220,0.07)',
+          borderBottom: `1px solid ${sc.divider}`,
         }}>
           <span style={{ fontSize: 16, opacity: 0.4, flexShrink: 0 }}>⌕</span>
           <input
@@ -258,10 +289,10 @@ export default function SearchPanel({
               background: 'transparent',
               border: 'none',
               outline: 'none',
-              color: 'rgba(230,238,255,0.95)',
+              color: sc.inputText,
               fontFamily: SANS,
               fontSize: 15,
-              caretColor: '#4ecdc4',
+              caretColor: sc.inputCaret,
             }}
           />
           {hasQuery && (
@@ -269,12 +300,12 @@ export default function SearchPanel({
               onClick={() => { setQuery(''); inputRef.current?.focus() }}
               style={{
                 background: 'none', border: 'none',
-                color: 'rgba(220,230,245,0.35)', fontSize: 16,
+                color: sc.inputBtnColor, fontSize: 16,
                 cursor: 'pointer', padding: '0 2px', lineHeight: 1,
                 transition: 'color 0.12s', flexShrink: 0,
               }}
-              onMouseEnter={e => e.currentTarget.style.color = 'rgba(220,230,245,0.8)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'rgba(220,230,245,0.35)'}
+              onMouseEnter={e => e.currentTarget.style.color = sc.inputBtnHov}
+              onMouseLeave={e => e.currentTarget.style.color = sc.inputBtnColor}
               aria-label="Clear search"
             >×</button>
           )}
@@ -284,7 +315,7 @@ export default function SearchPanel({
         <div style={{
           display: 'flex', gap: 5, flexWrap: 'wrap',
           padding: '8px 16px',
-          borderBottom: '1px solid rgba(110,231,220,0.07)',
+          borderBottom: `1px solid ${sc.divider}`,
         }}>
           {CHIPS.map(chip => {
             const isActive = activeChip === chip.id
@@ -296,13 +327,9 @@ export default function SearchPanel({
                   fontFamily: MONO, fontSize: 10, fontWeight: 600,
                   letterSpacing: '0.04em',
                   padding: '3px 9px', borderRadius: 10,
-                  border: isActive
-                    ? '1px solid rgba(78,205,196,0.55)'
-                    : '1px solid rgba(110,231,220,0.14)',
-                  background: isActive
-                    ? 'rgba(78,205,196,0.14)'
-                    : 'rgba(255,255,255,0.03)',
-                  color: isActive ? '#6ee7dc' : 'rgba(220,230,245,0.55)',
+                  border: isActive ? `1px solid ${sc.chipActiveBorder}` : `1px solid ${sc.chipIdleBorder}`,
+                  background: isActive ? sc.chipActiveBg : sc.chipIdleBg,
+                  color: isActive ? sc.chipActiveText : sc.chipIdleText,
                   cursor: 'pointer',
                   transition: 'background 0.1s, border-color 0.1s, color 0.1s',
                 }}
@@ -321,17 +348,17 @@ export default function SearchPanel({
         >
           {!hasResults && hasQuery && (
             <div style={{ padding: '28px 24px', textAlign: 'center' }}>
-              <div style={{ fontFamily: SANS, fontSize: 14, color: 'rgba(220,230,245,0.65)', marginBottom: 8 }}>
+              <div style={{ fontFamily: SANS, fontSize: 14, color: sc.rowNameIdle, marginBottom: 8 }}>
                 No matching nodes
               </div>
-              <div style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(220,230,245,0.35)' }}>
+              <div style={{ fontFamily: MONO, fontSize: 11, color: sc.emptyText }}>
                 Try a filename, folder, path segment, or signal like &lsquo;todo&rsquo;
               </div>
             </div>
           )}
           {!hasResults && !hasQuery && (
             <div style={{ padding: '20px 24px', textAlign: 'center' }}>
-              <div style={{ fontFamily: MONO, fontSize: 11, color: 'rgba(220,230,245,0.3)' }}>
+              <div style={{ fontFamily: MONO, fontSize: 11, color: sc.emptyText }}>
                 Start typing to search nodes
               </div>
             </div>
@@ -344,6 +371,7 @@ export default function SearchPanel({
                 rootPath={rootPath}
                 onMouseEnter={() => setSelectedIdx(i)}
                 onClick={() => onSelectNode?.(result.node)}
+                sc={sc}
               />
             </div>
           ))}
@@ -352,9 +380,9 @@ export default function SearchPanel({
         {/* Keyboard hint */}
         <div style={{
           padding: '7px 18px',
-          borderTop: '1px solid rgba(110,231,220,0.07)',
+          borderTop: `1px solid ${sc.divider}`,
           fontFamily: MONO, fontSize: 9,
-          color: 'rgba(220,230,245,0.25)',
+          color: sc.hintText,
           display: 'flex', gap: 12, flexWrap: 'wrap',
         }}>
           <span>Enter — select</span>

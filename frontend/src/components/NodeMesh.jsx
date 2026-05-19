@@ -3,15 +3,16 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Text, Html } from '@react-three/drei'
 import { Color, ShaderMaterial, AdditiveBlending } from 'three'
 import { getActiveSignals, SIGNAL_COLORS } from '../utils/signals'
-import { PALETTE, getNodeColor } from '../utils/palette'
+import { PALETTE, THEMES, getNodeColor } from '../utils/palette'
 
-function makeFresnelMaterial(hexColor) {
+function makeFresnelMaterial(hexColor, theme = THEMES.dark) {
   return new ShaderMaterial({
     uniforms: {
       uColor:        { value: new Color(hexColor) },
-      uRimColor:     { value: new Color('#a8f0ee') },
-      uRimPower:     { value: 2.5 },
-      uRimIntensity: { value: 0.7 },
+      uRimColor:     { value: new Color(theme.rimColor) },
+      uRimPower:     { value: theme.rimPower },
+      uRimIntensity: { value: theme.rimIntensity },
+      uColorBoost:   { value: theme.colorBoost },
       uPulse:        { value: 0.0 },
       uSelected:     { value: 0.0 },
       uHovered:      { value: 0.0 },
@@ -32,6 +33,7 @@ function makeFresnelMaterial(hexColor) {
       uniform vec3  uRimColor;
       uniform float uRimPower;
       uniform float uRimIntensity;
+      uniform float uColorBoost;
       uniform float uPulse;
       uniform float uSelected;
       uniform float uHovered;
@@ -43,7 +45,7 @@ function makeFresnelMaterial(hexColor) {
         float rim = pow(1.0 - max(dot(vViewDir, vNormal), 0.0), uRimPower);
         float pulse = 0.5 + 0.5 * uPulse;
 
-        vec3 color = uColor * 0.4;
+        vec3 color = uColor * uColorBoost;
         vec3 rimGlow = uRimColor * rim * uRimIntensity * pulse;
         float boost = 1.0 + uHovered * 0.5 + uSelected * 0.8;
 
@@ -138,6 +140,7 @@ function NodeMesh({
   activityMode = false,
   activityLevel = null,
   isActivityDirty = false,
+  colorTheme = 'dark',
 }) {
   const [isHovered, setIsHovered] = useState(false)
   const activeSignals = getActiveSignals(node)
@@ -152,7 +155,10 @@ function NodeMesh({
   const isAlert = activeSignals.some(k => k === 'gitDirty' || k === 'gitUnpushed')
   const radius = isAlert ? baseRadius * 1.12 : baseRadius
 
-  const mat = useMemo(() => makeFresnelMaterial(nodeColor), [nodeColor])
+  const mat = useMemo(
+    () => makeFresnelMaterial(nodeColor, THEMES[colorTheme] ?? THEMES.dark),
+    [nodeColor, colorTheme],
+  )
   useEffect(() => () => mat?.dispose(), [mat])
 
   const isHoveredRef = useRef(isHovered)

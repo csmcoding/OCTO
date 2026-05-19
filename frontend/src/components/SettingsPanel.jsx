@@ -93,8 +93,9 @@ function Slider({ value, min, max, step = 1, onChange, label, description, forma
 
 function ThemeSelector({ value, onChange }) {
   const themes = [
-    { id: 'dark',      label: 'Dark',       preview: ['#0a0a18', '#171628', '#4ecdc4'] },
-    { id: 'deepspace', label: 'Deep Space', preview: ['#04040f', '#0d0d24', '#7c9df5'] },
+    { id: 'dark',      label: 'Dark',               preview: ['#0a0a18', '#171628', '#4ecdc4'] },
+    { id: 'deepspace', label: 'Deep Space',          preview: ['#04040f', '#0d0d24', '#7c9df5'] },
+    { id: 'light',     label: 'Light — Future Glass',preview: ['#e8edf5', '#d4dce9', '#006080'] },
   ]
   return (
     <div style={{ padding: '8px 0' }}>
@@ -255,6 +256,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
               setSetting('colorTheme', 'dark')
               setSetting('activityMode', false)
             }}
+            title="Reset to dark theme defaults"
             style={{
               flex: 1, padding: '6px 0',
               background: 'rgba(110,110,158,0.06)',

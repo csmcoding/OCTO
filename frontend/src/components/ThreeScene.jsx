@@ -7,7 +7,7 @@ import ChangeRootButton from './ChangeRootButton'
 import { exportMarkdown, downloadMarkdown } from '../utils/exportMarkdown'
 import { buildTentacleLayout } from '../utils/buildTentacleLayout'
 import { useRevealProgress } from '../utils/useAnimationClock'
-import { getNodeColor } from '../utils/palette'
+import { getNodeColor, THEMES } from '../utils/palette'
 import Tentacle from './Tentacle'
 import NodeMesh from './NodeMesh'
 import MarineSnow from './MarineSnow'
@@ -282,19 +282,15 @@ function OverflowBadge({ total, visible }) {
 function SceneBackground({ colorTheme }) {
   const { gl, scene } = useThree()
   useEffect(() => {
-    const themes = {
-      dark:      { bg: '#0d1018', fogColor: '#111827', density: 0.026 },
-      deepspace: { bg: '#090b12', fogColor: '#0b1020', density: 0.038 },
-    }
-    const t = themes[colorTheme] ?? themes.dark
+    const t = THEMES[colorTheme] ?? THEMES.dark
     gl.setClearColor(t.bg, 1)
-    scene.fog = new FogExp2(t.fogColor, t.density)
+    scene.fog = new FogExp2(t.fogColor, t.fogDensity)
     return () => { scene.fog = null }
   }, [colorTheme, gl, scene])
   return null
 }
 
-function AnimatedFillLight() {
+function AnimatedFillLight({ color = '#314a9f', intensity = 0.72 }) {
   const lightRef = useRef()
   useFrame(({ clock }) => {
     if (!lightRef.current) return
@@ -302,7 +298,7 @@ function AnimatedFillLight() {
     lightRef.current.position.set(Math.sin(t) * 9, 3, Math.cos(t) * 9)
   })
   return (
-    <pointLight ref={lightRef} intensity={0.72} color="#314a9f" distance={22} decay={2} />
+    <pointLight ref={lightRef} intensity={intensity} color={color} distance={22} decay={2} />
   )
 }
 
@@ -359,29 +355,31 @@ function SceneObjects({
     centerRef.current.scale.setScalar(scale)
   })
 
+  const theme = THEMES[colorTheme] ?? THEMES.dark
+
   return (
     <group>
-      <StarField />
-      <MarineSnow sway={sway} />
+      {theme.showStars && <StarField />}
+      <MarineSnow sway={sway} colorTheme={colorTheme} />
       <Grid
         position={[0, -6, 0]}
         args={[30, 30]}
         cellSize={1}
         cellThickness={0.3}
-        cellColor="#1e2040"
+        cellColor={theme.cellColor}
         sectionSize={5}
         sectionThickness={0.8}
-        sectionColor="#2e3055"
+        sectionColor={theme.sectionColor}
         fadeDistance={20}
         fadeStrength={2}
         infiniteGrid
       />
 
-      <ambientLight intensity={0.16} color="#d8e6ff" />
-      <pointLight position={[0, 0, 0]}  intensity={2.1} color="#6ee7dc" distance={15} decay={2} />
-      <pointLight position={[0, 10, 2]} intensity={0.85} color="#ffffff" distance={26} decay={2} />
-      <pointLight position={[-8, 4, -6]} intensity={0.45} color="#7aa2ff" distance={22} decay={2} />
-      <AnimatedFillLight />
+      <ambientLight intensity={theme.ambientIntensity} color={theme.ambientColor} />
+      <pointLight position={[0, 0, 0]}  intensity={theme.centerLightIntensity} color={theme.centerLight} distance={15} decay={2} />
+      <pointLight position={[0, 10, 2]} intensity={theme.topLightIntensity} color={theme.topLight} distance={26} decay={2} />
+      <pointLight position={[-8, 4, -6]} intensity={theme.sideLightIntensity} color={theme.sideLight} distance={22} decay={2} />
+      <AnimatedFillLight color={theme.fillLight} intensity={theme.fillLightIntensity} />
 
       {parentNode && (
         <mesh position={[0, 0, 3]} scale={[0.5, 0.5, 0.5]}>
@@ -427,6 +425,7 @@ function SceneObjects({
               hovered={isHovered}
               nodeCount={nodeCount}
               sway={sway}
+              colorTheme={colorTheme}
             />
             <NodeMesh
               node={node}
@@ -442,6 +441,7 @@ function SceneObjects({
               activityMode={activityMode}
               activityLevel={activityLevel}
               isActivityDirty={activityItem?.isDirty ?? false}
+              colorTheme={colorTheme}
               onPointerEnter={(n, e) => {
                 onHoveredChange(node.id)
                 onHoverPosition?.(endPosition)
@@ -739,6 +739,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
       <Breadcrumb
         navStack={navStack}
         onCrumbClick={(idx) => setNavStack(prev => prev.slice(0, idx + 1))}
+        colorTheme={settings.colorTheme}
       />
       <div
         style={{ width: '100%', height: '100%' }}
@@ -756,7 +757,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         >
           <SceneBackground colorTheme={settings.colorTheme} />
           <CameraRig hoveredPosition={hoveredEndPos} autoRotate={settings.autoRotate} onCameraMove={handleCameraMove} />
-          <HoverRipple position={hoveredEndPos} />
+          <HoverRipple position={hoveredEndPos} colorTheme={settings.colorTheme} />
           {currentRoot && (
             <SceneObjects
               currentRoot={currentRoot}
@@ -920,6 +921,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         onJumpToNode={setSelectedNode}
         collapsed={minimapCollapsed}
         onToggleCollapsed={() => setMinimapCollapsed(v => !v)}
+        colorTheme={settings.colorTheme}
       />
       <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} />
       <NodeTooltip node={tooltip.node} x={tooltip.x} y={tooltip.y} />
@@ -937,6 +939,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           rootPath={currentRoot?.path}
           activityMode={settings.activityMode}
           activityItem={selectedActivityItem}
+          colorTheme={settings.colorTheme}
         />
       )}
       {showBack && (
@@ -971,6 +974,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         onClose={() => setSearchOpen(false)}
         onSelectNode={handleSearchSelect}
         onDrillToNode={handleSearchDrillToNode}
+        colorTheme={settings.colorTheme}
       />
     </>
   )
