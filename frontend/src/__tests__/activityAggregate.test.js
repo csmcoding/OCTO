@@ -5,6 +5,7 @@ import {
   aggregateFolderActivity,
   getActivityLevel,
   computeActivitySummary,
+  scoreActivity,
 } from '../utils/activityAggregate.js'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -155,5 +156,42 @@ describe('computeActivitySummary', () => {
 
   it('returns null when nothing is tracked', () => {
     expect(computeActivitySummary([file('x.js', '/x.js')], {})).toBeNull()
+  })
+})
+
+// ── scoreActivity ─────────────────────────────────────────────────────────────
+
+describe('scoreActivity', () => {
+  it('returns 0 for null', () => {
+    expect(scoreActivity(null)).toBe(0)
+  })
+
+  it('returns 3 for hot item (commit < 24h)', () => {
+    const recent = new Date(Date.now() - 3600000).toISOString()
+    expect(scoreActivity({ lastCommitAt: recent, isDirty: false })).toBe(3)
+  })
+
+  it('returns 3 for dirty item regardless of recency', () => {
+    const old = new Date(Date.now() - 45 * 86400000).toISOString()
+    expect(scoreActivity({ lastCommitAt: old, isDirty: true })).toBe(3)
+  })
+
+  it('returns 2 for warm item (2–6 days ago)', () => {
+    const threedays = new Date(Date.now() - 3 * 86400000).toISOString()
+    expect(scoreActivity({ lastCommitAt: threedays, isDirty: false })).toBe(2)
+  })
+
+  it('returns 1 for cool item (8–29 days ago)', () => {
+    const twoweeks = new Date(Date.now() - 14 * 86400000).toISOString()
+    expect(scoreActivity({ lastCommitAt: twoweeks, isDirty: false })).toBe(1)
+  })
+
+  it('returns 0 for stale item (> 30 days ago)', () => {
+    const old = new Date(Date.now() - 45 * 86400000).toISOString()
+    expect(scoreActivity({ lastCommitAt: old, isDirty: false })).toBe(0)
+  })
+
+  it('returns 0 for item with null lastCommitAt and not dirty', () => {
+    expect(scoreActivity({ lastCommitAt: null, isDirty: false })).toBe(0)
   })
 })

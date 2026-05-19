@@ -1,7 +1,7 @@
 import React, { useRef, useState, useMemo, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Text, Html } from '@react-three/drei'
-import { Color, ShaderMaterial, AdditiveBlending } from 'three'
+import { Color, ShaderMaterial, AdditiveBlending, NormalBlending } from 'three'
 import { getActiveSignals, SIGNAL_COLORS } from '../utils/signals'
 import { PALETTE, THEMES, getNodeColor } from '../utils/palette'
 
@@ -87,7 +87,7 @@ function SignalAura({ color, index }) {
 // ── Activity aura ring ──────────────────────────────────────────────────────
 // Rendered at a larger radius than SignalAura so they never overlap.
 // level: 'hot' | 'warm' | 'cool' | null   isDirty: boolean
-function ActivityAura({ level, isDirty, index }) {
+function ActivityAura({ level, isDirty, index, colorTheme = 'dark' }) {
   const meshRef = useRef()
   const color = isDirty   ? '#e8a020'
     : level === 'hot'     ? '#ff6b35'
@@ -102,6 +102,7 @@ function ActivityAura({ level, isDirty, index }) {
     : 0.03
 
   const doPulse = isDirty || level === 'hot'
+  const blending = colorTheme === 'light' ? NormalBlending : AdditiveBlending
 
   useFrame(({ clock }) => {
     if (!meshRef.current) return
@@ -121,7 +122,7 @@ function ActivityAura({ level, isDirty, index }) {
         color={color}
         transparent
         opacity={baseOpacity}
-        blending={AdditiveBlending}
+        blending={blending}
         depthWrite={false}
         side={2}
       />
@@ -168,6 +169,8 @@ function NodeMesh({
   isSelectedRef.current = isSelected
   const isDimmedRef = useRef(isDimmed)
   isDimmedRef.current = isDimmed
+  const isStaleRef = useRef(false)
+  isStaleRef.current = activityMode && activityLevel === 'stale'
   const revealRef = useRef({ revealProgress, delay })
   revealRef.current = { revealProgress, delay }
   const indexRef = useRef(index)
@@ -181,7 +184,8 @@ function NodeMesh({
     mat.uniforms.uPulse.value    = Math.sin(t * 1.2 + indexRef.current * 0.7)
     mat.uniforms.uHovered.value  = isHoveredRef.current ? 1.0 : 0.0
     mat.uniforms.uSelected.value = isSelectedRef.current ? 1.0 : 0.0
-    mat.uniforms.uOpacity.value  = isDimmedRef.current ? nodeProgress * 0.18 : nodeProgress
+    const baseOpacity = isStaleRef.current ? 0.45 : 1.0
+    mat.uniforms.uOpacity.value  = isDimmedRef.current ? nodeProgress * 0.18 : nodeProgress * baseOpacity
   })
 
   return (
@@ -208,7 +212,7 @@ function NodeMesh({
 
       {hasSignals && <SignalAura color={auraColor} index={index} />}
       {activityMode && (activityLevel || isActivityDirty) && activityLevel !== 'stale' && (
-        <ActivityAura level={activityLevel} isDirty={isActivityDirty} index={index} />
+        <ActivityAura level={activityLevel} isDirty={isActivityDirty} index={index} colorTheme={colorTheme} />
       )}
 
       {hasSignals && (

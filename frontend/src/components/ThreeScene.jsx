@@ -932,6 +932,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         <ActivityLegend
           summary={activitySummary}
           unavailable={activityData?.unavailable ?? null}
+          colorTheme={settings.colorTheme}
         />
       )}
       <Minimap
@@ -944,6 +945,8 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         collapsed={minimapCollapsed}
         onToggleCollapsed={() => setMinimapCollapsed(v => !v)}
         colorTheme={settings.colorTheme}
+        activityMode={settings.activityMode}
+        activityIndex={settings.activityMode ? (activityData?.byPath ?? null) : null}
       />
       <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} />
       <NodeTooltip node={tooltip.node} x={tooltip.x} y={tooltip.y} />
@@ -998,6 +1001,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         onSelectNode={handleSearchSelect}
         onDrillToNode={handleSearchDrillToNode}
         colorTheme={settings.colorTheme}
+        activityIndex={settings.activityMode ? (activityData?.byPath ?? null) : null}
       />
     </>
   )

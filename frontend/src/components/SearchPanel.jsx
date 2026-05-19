@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { fuzzySearch } from '../utils/fuzzySearch.js'
 import { getActiveSignals, SIGNAL_COLORS } from '../utils/signals.js'
+import { getActivityLevel } from '../utils/activityAggregate.js'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
@@ -33,6 +34,9 @@ function getSearchColors(colorTheme) {
     hintText:       l ? 'rgba(30,60,100,0.3)'   : 'rgba(220,230,245,0.25)',
   }
 }
+
+const ACT_COLORS = { hot: '#ff6b35', warm: '#c8a020', cool: '#4a9090' }
+const ACT_LABELS = { hot: 'today', warm: 'this week', cool: 'this month' }
 
 const CHIPS = [
   { id: 'all',     label: 'All',     typeFilter: null,     signalFilter: null      },
@@ -84,10 +88,11 @@ function SignalDots({ node }) {
   )
 }
 
-function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, sc }) {
+function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, sc, activityLevel }) {
   const { node, matchReason } = result
   const path = relPath(node.path, rootPath)
   const displayPath = path.length > 60 ? '…' + path.slice(-60) : path
+  const actColor = activityLevel ? ACT_COLORS[activityLevel] : null
 
   return (
     <div
@@ -133,14 +138,28 @@ function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, sc }) {
         </div>
       </div>
 
-      {/* Right side: signal dots + match reason */}
+      {/* Right side: signal dots + activity badge + match reason */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
         <SignalDots node={node} />
-        {matchReason && (
-          <span style={{ fontFamily: MONO, fontSize: 9, color: sc.rowMatch, whiteSpace: 'nowrap' }}>
-            {matchReason}
-          </span>
-        )}
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          {actColor && (
+            <span style={{
+              fontFamily: MONO, fontSize: 8, fontWeight: 700,
+              letterSpacing: '0.04em',
+              color: actColor,
+              background: actColor + '20',
+              border: `1px solid ${actColor}44`,
+              borderRadius: 3, padding: '1px 4px', flexShrink: 0,
+            }}>
+              {ACT_LABELS[activityLevel]}
+            </span>
+          )}
+          {matchReason && (
+            <span style={{ fontFamily: MONO, fontSize: 9, color: sc.rowMatch, whiteSpace: 'nowrap' }}>
+              {matchReason}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -154,6 +173,7 @@ export default function SearchPanel({
   onSelectNode,
   onDrillToNode,
   colorTheme = 'dark',
+  activityIndex = null,
 }) {
   const [query, setQuery]           = useState('')
   const [activeChip, setActiveChip] = useState('all')
@@ -168,8 +188,8 @@ export default function SearchPanel({
     fuzzySearch(nodes ?? [], query, {
       typeFilter:   chip.typeFilter,
       signalFilter: chip.signalFilter,
-    }),
-  [nodes, query, chip.typeFilter, chip.signalFilter])
+    }, activityIndex),
+  [nodes, query, chip.typeFilter, chip.signalFilter, activityIndex])
 
   // Reset selection when results change
   useEffect(() => { setSelectedIdx(0) }, [results])
@@ -363,18 +383,24 @@ export default function SearchPanel({
               </div>
             </div>
           )}
-          {results.map((result, i) => (
-            <div key={result.node.id ?? result.node.path} ref={i === selectedIdx ? activeRowRef : null}>
-              <ResultRow
-                result={result}
-                isActive={i === selectedIdx}
-                rootPath={rootPath}
-                onMouseEnter={() => setSelectedIdx(i)}
-                onClick={() => onSelectNode?.(result.node)}
-                sc={sc}
-              />
-            </div>
-          ))}
+          {results.map((result, i) => {
+            const actLvl = activityIndex
+              ? getActivityLevel(activityIndex[result.node.path] ?? null)
+              : null
+            return (
+              <div key={result.node.id ?? result.node.path} ref={i === selectedIdx ? activeRowRef : null}>
+                <ResultRow
+                  result={result}
+                  isActive={i === selectedIdx}
+                  rootPath={rootPath}
+                  onMouseEnter={() => setSelectedIdx(i)}
+                  onClick={() => onSelectNode?.(result.node)}
+                  sc={sc}
+                  activityLevel={actLvl}
+                />
+              </div>
+            )
+          })}
         </div>
 
         {/* Keyboard hint */}

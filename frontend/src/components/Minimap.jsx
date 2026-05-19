@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { getNodeColor } from '../utils/palette'
 import { computeProjection, findClosestNode } from '../utils/projectMinimap'
+import { getActivityLevel } from '../utils/activityAggregate'
 
 export { findClosestNode }
 
@@ -12,6 +13,8 @@ const PAD   = 14
 
 export { EXP_W, EXP_H, COL_W, COL_H }
 
+const ACT_HALO_COLORS = { hot: '#ff6b35', warm: '#c8a020', cool: '#4a9090' }
+
 export default function Minimap({
   nodes,
   selectedNodeId,
@@ -22,6 +25,8 @@ export default function Minimap({
   collapsed,
   onToggleCollapsed,
   colorTheme = 'dark',
+  activityMode = false,
+  activityIndex = null,
 }) {
   const isLight = colorTheme === 'light'
   const mmBg     = isLight ? 'rgba(235,240,250,0.92)' : 'rgba(6,6,18,0.85)'
@@ -61,6 +66,25 @@ export default function Minimap({
         ctx.lineWidth = 0.5
         ctx.stroke()
       })
+
+      // Activity halos (drawn before node dots so they appear behind)
+      if (activityMode && activityIndex) {
+        pts.forEach((pt, i) => {
+          const node = entries[i].node
+          const actItem  = activityIndex[node.path] ?? null
+          const actLvl   = getActivityLevel(actItem)
+          const actColor = ACT_HALO_COLORS[actLvl]
+          if (!actColor) return
+          const haloR = node.id === selectedNodeId ? 9 : 7
+          ctx.beginPath()
+          ctx.arc(pt.x, pt.y, haloR, 0, Math.PI * 2)
+          const grad = ctx.createRadialGradient(pt.x, pt.y, 0, pt.x, pt.y, haloR)
+          grad.addColorStop(0, actColor + '55')
+          grad.addColorStop(1, actColor + '00')
+          ctx.fillStyle = grad
+          ctx.fill()
+        })
+      }
 
       // Nodes
       pts.forEach((pt, i) => {
@@ -144,7 +168,7 @@ export default function Minimap({
 
     raf = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(raf)
-  }, [nodes, selectedNodeId, hoveredNodeId, cameraPosition, currentRoot, collapsed])
+  }, [nodes, selectedNodeId, hoveredNodeId, cameraPosition, currentRoot, collapsed, colorTheme, activityMode, activityIndex])
 
   const handleClick = (e) => {
     const canvas = canvasRef.current

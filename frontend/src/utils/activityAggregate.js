@@ -88,6 +88,19 @@ export function getActivityLevel(item) {
 }
 
 /**
+ * Map an activity item to a 0-3 intensity score for visual / sort use.
+ * 0 = none/stale, 1 = cool, 2 = warm, 3 = hot or dirty
+ */
+export function scoreActivity(item) {
+  if (!item) return 0
+  if (item.isDirty || getActivityLevel(item) === 'hot') return 3
+  const lvl = getActivityLevel(item)
+  if (lvl === 'warm') return 2
+  if (lvl === 'cool') return 1
+  return 0
+}
+
+/**
  * Compute a one-line summary for the activity mode banner.
  * Operates on the currently visible layout nodes.
  */
