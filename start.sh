@@ -6,6 +6,20 @@ BACKEND_PORT=7823
 FRONTEND_PORT=5173
 BACKEND_PID=""
 FRONTEND_PID=""
+PROD=0
+
+# Parse flags
+for arg in "$@"; do
+  case "$arg" in
+    --prod) PROD=1 ;;
+    --help|-h)
+      echo "Usage: ./start.sh [--prod]"
+      echo "  (no flags)  dev mode  — Vite dev server with HMR"
+      echo "  --prod      prod mode — builds frontend, serves via vite preview"
+      exit 0
+      ;;
+  esac
+done
 
 cleanup() {
   echo "\n⏹  Shutting down..."
@@ -15,7 +29,14 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-echo "🐙 Starting octopus-dashboard..."
+echo "🐙 Starting octopus-dashboard${PROD:+ (prod build)}..."
+
+# Build frontend for prod mode
+if [[ $PROD -eq 1 ]]; then
+  echo "   Building frontend..."
+  cd "$REPO/frontend" && npm run build
+  cd "$REPO"
+fi
 
 # Start backend
 cd "$REPO"
@@ -40,9 +61,13 @@ for i in $(seq 1 30); do
   fi
 done
 
-# Start frontend
+# Start frontend (dev or prod/preview)
 cd "$REPO/frontend"
-npm run dev &
+if [[ $PROD -eq 1 ]]; then
+  npm run preview &
+else
+  npm run dev &
+fi
 FRONTEND_PID=$!
 echo "   Frontend PID: $FRONTEND_PID"
 
