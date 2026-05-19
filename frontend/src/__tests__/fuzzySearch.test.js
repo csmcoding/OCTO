@@ -132,3 +132,67 @@ describe('fuzzySearch', () => {
     expect(results[0].node.path).toBe('/b/app')
   })
 })
+
+// ── activityFilter ────────────────────────────────────────────────────────────
+
+describe('activityFilter: recent', () => {
+  const recent = new Date(Date.now() - 3600000).toISOString()  // hot
+  const warm   = new Date(Date.now() - 3 * 86400000).toISOString()
+  const old    = new Date(Date.now() - 45 * 86400000).toISOString()
+
+  const mkActivity = (path, lastCommitAt) => ({
+    path, lastCommitAt, isDirty: false, commitCount7d: 0, commitCount30d: 0,
+  })
+
+  it('excludes nodes with null activity (untracked)', () => {
+    const nodes = [file('a.js', '/a.js'), file('b.js', '/b.js')]
+    const results = fuzzySearch(nodes, '', { activityFilter: 'recent' }, {})
+    expect(results).toHaveLength(0)
+  })
+
+  it('excludes stale nodes', () => {
+    const nodes  = [file('a.js', '/a.js')]
+    const index  = { '/a.js': mkActivity('/a.js', old) }
+    const results = fuzzySearch(nodes, '', { activityFilter: 'recent' }, index)
+    expect(results).toHaveLength(0)
+  })
+
+  it('includes hot nodes', () => {
+    const nodes  = [file('a.js', '/a.js')]
+    const index  = { '/a.js': mkActivity('/a.js', recent) }
+    const results = fuzzySearch(nodes, '', { activityFilter: 'recent' }, index)
+    expect(results).toHaveLength(1)
+  })
+
+  it('includes warm nodes', () => {
+    const nodes  = [file('a.js', '/a.js')]
+    const index  = { '/a.js': mkActivity('/a.js', warm) }
+    const results = fuzzySearch(nodes, '', { activityFilter: 'recent' }, index)
+    expect(results).toHaveLength(1)
+  })
+
+  it('filters out stale while keeping recent in mixed set', () => {
+    const nodes = [file('hot.js', '/hot.js'), file('old.js', '/old.js')]
+    const index = {
+      '/hot.js': mkActivity('/hot.js', recent),
+      '/old.js': mkActivity('/old.js', old),
+    }
+    const results = fuzzySearch(nodes, '', { activityFilter: 'recent' }, index)
+    expect(results).toHaveLength(1)
+    expect(results[0].node.path).toBe('/hot.js')
+  })
+
+  it('aggregates folder children before checking activity', () => {
+    const child = file('x.js', '/root/x.js')
+    const parent = { id: '/root', name: 'root', path: '/root', type: 'folder', signals: {}, children: [child] }
+    const index = { '/root/x.js': mkActivity('/root/x.js', recent) }
+    const results = fuzzySearch([parent], '', { activityFilter: 'recent' }, index)
+    expect(results).toHaveLength(1)
+  })
+
+  it('does nothing when activityIndex is null', () => {
+    const nodes = [file('a.js', '/a.js')]
+    const results = fuzzySearch(nodes, '', { activityFilter: 'recent' }, null)
+    expect(results).toHaveLength(1)
+  })
+})

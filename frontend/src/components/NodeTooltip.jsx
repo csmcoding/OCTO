@@ -16,7 +16,10 @@ export function getTooltipLines(node) {
   }
 }
 
-export default function NodeTooltip({ node, x, y }) {
+const ACT_COLORS = { hot: '#ff6b35', warm: '#c8a020', cool: '#4a9090', stale: '#555570' }
+const ACT_LABELS = { hot: 'active today', warm: 'active this week', cool: 'active this month', stale: 'quiet' }
+
+export default function NodeTooltip({ node, x, y, activityLevel = null }) {
   if (!node) return null
 
   const nodeColor = getNodeColor(node)
@@ -46,7 +49,7 @@ export default function NodeTooltip({ node, x, y }) {
     }}>
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6,
-        marginBottom: activeSignals.length > 0 || (isFolder && childCount > 0) ? 5 : 0,
+        marginBottom: (activityLevel || activeSignals.length > 0 || (isFolder && childCount > 0)) ? 5 : 0,
       }}>
         <span style={{ fontSize: 11, opacity: 0.55 }}>
           {isFolder ? '⬡' : '◈'}
@@ -61,6 +64,17 @@ export default function NodeTooltip({ node, x, y }) {
           maxWidth: 160,
         }}>{node.name}</span>
       </div>
+
+      {activityLevel && ACT_LABELS[activityLevel] && (
+        <div style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: 9, letterSpacing: '0.04em',
+          color: ACT_COLORS[activityLevel] ?? 'rgba(200,200,230,0.55)',
+          marginBottom: activeSignals.length > 0 ? 3 : 0,
+        }}>
+          ◎ {ACT_LABELS[activityLevel]}
+        </div>
+      )}
 
       {activeSignals.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

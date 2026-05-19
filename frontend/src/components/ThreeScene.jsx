@@ -25,7 +25,7 @@ import SettingsPanel from './SettingsPanel'
 import ActivityLegend from './ActivityLegend'
 import ArchLegend from './ArchLegend'
 import { loadActivity } from '../utils/loadActivity'
-import { getNodeActivity, aggregateFolderActivity, getActivityLevel, computeActivitySummary } from '../utils/activityAggregate'
+import { getNodeActivity, aggregateFolderActivity, getActivityLevel, computeActivitySummary, computeActivityLevelCounts } from '../utils/activityAggregate'
 
 function CameraRig({ hoveredPosition, autoRotate, onCameraMove }) {
   const { camera, size } = useThree()
@@ -683,6 +683,13 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
     return computeActivitySummary(nodes, activityData.byPath)
   }, [settings.activityMode, activityData, layout])
 
+  // Per-level counts for ActivityLegend
+  const activityLevelCounts = useMemo(() => {
+    if (!settings.activityMode || !activityData?.byPath) return null
+    const nodes = layout.map(e => e.node)
+    return computeActivityLevelCounts(nodes, activityData.byPath)
+  }, [settings.activityMode, activityData, layout])
+
   const handlePin = useCallback((node) => {
     setPins(prev => prev.some(p => p.id === node.id) ? prev : [...prev, node])
   }, [])
@@ -950,6 +957,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         <ActivityLegend
           summary={activitySummary}
           unavailable={activityData?.unavailable ?? null}
+          levelCounts={activityLevelCounts}
           colorTheme={settings.colorTheme}
         />
       )}
@@ -973,7 +981,20 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         activityIndex={settings.activityMode ? (activityData?.byPath ?? null) : null}
       />
       <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} />
-      <NodeTooltip node={tooltip.node} x={tooltip.x} y={tooltip.y} />
+      <NodeTooltip
+        node={tooltip.node}
+        x={tooltip.x}
+        y={tooltip.y}
+        activityLevel={
+          tooltip.node && settings.activityMode && activityData?.byPath
+            ? getActivityLevel(
+                tooltip.node.type === 'folder'
+                  ? aggregateFolderActivity(tooltip.node, activityData.byPath)
+                  : (activityData.byPath[tooltip.node.path] ?? null)
+              )
+            : null
+        }
+      />
       {selectedNode && (
         <Panel
           node={selectedNode}

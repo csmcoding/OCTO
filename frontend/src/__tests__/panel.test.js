@@ -183,4 +183,16 @@ describe('Panel — buildActivityDisplay', () => {
     expect(typeof display.summary).toBe('string')
     expect(display.summary.length).toBeGreaterThan(0)
   })
+
+  it('includes churnLabel for high-churn item', () => {
+    const item = { lastCommitAt: null, commitCount7d: 5, commitCount30d: 20, isDirty: false }
+    const display = buildActivityDisplay(item)
+    expect(display.churnLabel).toBe('high churn')
+  })
+
+  it('includes null churnLabel when no commits', () => {
+    const item = { lastCommitAt: null, commitCount7d: 0, commitCount30d: 0, isDirty: false }
+    const display = buildActivityDisplay(item)
+    expect(display.churnLabel).toBeNull()
+  })
 })

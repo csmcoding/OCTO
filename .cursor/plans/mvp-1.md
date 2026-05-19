@@ -1234,3 +1234,46 @@ bash install.sh              # first-time setup
 **Tests:** 179 frontend + 56 backend — all pass. Build clean.
 
 **Next:** PROMPT 39 — choose: timeline activity enhancements OR semantic clustering / architecture mode
+
+---
+
+## PROMPT 39 — Semantic Clustering / Architecture Mode (COMPLETE)
+
+**What was implemented:**
+- `frontend/src/utils/archClassify.js` — 9-cluster deterministic classifier (tests → config → docs → scripts → assets → data → backend → frontend → other), priority-ordered rules using path/name/extension heuristics. `classifyNode(node)` → `{ cluster, reason }`. `summarizeFolderClusters(node)` → count per cluster.
+- `frontend/src/components/ArchLegend.jsx` — fixed legend at `bottom: 210, left: 20`, shows 9 clusters with color dots, labels, optional child counts
+- Architecture mode toggle `[A]` in settings, mutually exclusive with activity mode `[T]`
+- Scene: node spheres colored by arch cluster when archMode active (overrides type color)
+- Panel: cluster badge + reason in "Architecture" section when archMode active
+- Search: cluster color badge on each result row when archMode active
+- 62 new tests in `archClassify.test.js`; all 228 frontend + 56 backend tests pass
+
+**Files changed:** `archClassify.js` (new), `ArchLegend.jsx` (new), `archClassify.test.js` (new), `ThreeScene.jsx`, `NodeMesh.jsx`, `Panel.jsx`, `SearchPanel.jsx`, `SettingsPanel.jsx`
+
+---
+
+## PROMPT 40 — Timeline / Activity Layer (COMPLETE)
+
+**Context:** Activity system was substantially pre-built (PROMPTs 33/36). This prompt filled the genuine gaps.
+
+**What was added:**
+- `getChurnLabel(item)` in `activityAggregate.js` — classifies commit frequency as `'high churn' | 'steady' | 'light' | null`. Thresholds: high churn ≥5 commits/week or ≥15/month; steady ≥2/week or ≥5/month; light = any 30d commits.
+- `computeActivityLevelCounts(nodes, activityIndex)` in `activityAggregate.js` — returns `{ hot, warm, cool, stale, unknown }` counts for visible layout nodes (with folder rollup)
+- **ActivityLegend** now accepts `levelCounts` prop and shows per-level node counts as colored numbers
+- **Panel ActivitySection** shows churn label chip ("high churn" / "steady" / "light") alongside recency chip
+- **SearchPanel** has new "Recent" chip (activityFilter: 'recent') — filters to hot/warm/cool nodes only
+- **fuzzySearch.js** supports `activityFilter: 'recent'` in filters object, using `aggregateFolderActivity` for folder nodes
+- **NodeTooltip** accepts `activityLevel` prop; shows colored "◎ active today/this week/this month/quiet" line when in activity mode
+- **ThreeScene** computes `activityLevelCounts` and passes to ActivityLegend; passes `activityLevel` to NodeTooltip inline from `activityData.byPath`
+
+**Tests:** 16 new tests in `activityAggregate.test.js` (getChurnLabel × 8, computeActivityLevelCounts × 8); 8 new tests in `fuzzySearch.test.js` (activityFilter suite); 2 new tests in `panel.test.js` (churnLabel in buildActivityDisplay). 252 frontend + 56 backend — all pass. Build clean.
+
+**Files changed:** `activityAggregate.js`, `activityAggregate.test.js`, `fuzzySearch.js`, `fuzzySearch.test.js`, `ActivityLegend.jsx`, `NodeTooltip.jsx`, `Panel.jsx`, `SearchPanel.jsx`, `ThreeScene.jsx`, `panel.test.js`
+
+**Activity rules in effect:**
+- Level: hot (<24h), warm (<7d), cool (<30d), stale (≥30d or no commit)
+- Churn: high churn (≥5/wk or ≥15/mo), steady (≥2/wk or ≥5/mo), light (any 30d commits)
+- Search filter "Recent" = hot + warm + cool (excludes stale + untracked)
+- Folder activity = aggregate of descendant files (max recency, summed counts)
+
+**Next:** Choose next feature or continue beta hardening

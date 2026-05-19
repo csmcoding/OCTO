@@ -1,5 +1,5 @@
 import { getActiveSignals, SIGNAL_LABELS } from './signals.js'
-import { scoreActivity } from './activityAggregate.js'
+import { scoreActivity, getActivityLevel, aggregateFolderActivity } from './activityAggregate.js'
 
 function isSubsequence(str, query) {
   let qi = 0
@@ -17,12 +17,19 @@ const SIGNAL_FILTER_MAP = {
   deep:    s => s === 'deepNesting',
 }
 
-function passesFilter(node, { signalFilter, typeFilter } = {}) {
+function passesFilter(node, { signalFilter, typeFilter, activityFilter } = {}, activityIndex = null) {
   if (typeFilter && node.type !== typeFilter) return false
   if (signalFilter) {
     const active = getActiveSignals(node)
     const check = SIGNAL_FILTER_MAP[signalFilter]
     if (!check || !active.some(check)) return false
+  }
+  if (activityFilter === 'recent' && activityIndex) {
+    const item = node.type === 'folder'
+      ? aggregateFolderActivity(node, activityIndex)
+      : (activityIndex[node.path] ?? null)
+    const level = getActivityLevel(item)
+    if (level !== 'hot' && level !== 'warm' && level !== 'cool') return false
   }
   return true
 }
@@ -32,8 +39,8 @@ function passesFilter(node, { signalFilter, typeFilter } = {}) {
  * Returns null if the node is excluded or unmatched.
  * Returns { score, matchReason } on match.
  */
-export function scoreNode(node, query, filters = {}) {
-  if (!passesFilter(node, filters)) return null
+export function scoreNode(node, query, filters = {}, activityIndex = null) {
+  if (!passesFilter(node, filters, activityIndex)) return null
 
   const q = (query ?? '').toLowerCase().trim()
   if (!q) {
@@ -84,7 +91,7 @@ export function fuzzySearch(nodes, query, filters = {}, activityIndex = null) {
   const scored = []
 
   for (const node of nodes) {
-    const result = scoreNode(node, query, filters)
+    const result = scoreNode(node, query, filters, activityIndex)
     if (!result) continue
     scored.push({ node, score: result.score, matchReason: result.matchReason })
   }

@@ -6,6 +6,8 @@ import {
   getActivityLevel,
   computeActivitySummary,
   scoreActivity,
+  getChurnLabel,
+  computeActivityLevelCounts,
 } from '../utils/activityAggregate.js'
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -193,5 +195,98 @@ describe('scoreActivity', () => {
 
   it('returns 0 for item with null lastCommitAt and not dirty', () => {
     expect(scoreActivity({ lastCommitAt: null, isDirty: false })).toBe(0)
+  })
+})
+
+// ── getChurnLabel ─────────────────────────────────────────────────────────────
+
+describe('getChurnLabel', () => {
+  it('returns null for null item', () => {
+    expect(getChurnLabel(null)).toBeNull()
+  })
+
+  it('returns null for zero commits', () => {
+    expect(getChurnLabel(activity('/x.js'))).toBeNull()
+  })
+
+  it('returns high churn when commitCount7d >= 5', () => {
+    expect(getChurnLabel(activity('/x.js', { commitCount7d: 5, commitCount30d: 5 }))).toBe('high churn')
+  })
+
+  it('returns high churn when commitCount30d >= 15', () => {
+    expect(getChurnLabel(activity('/x.js', { commitCount7d: 1, commitCount30d: 15 }))).toBe('high churn')
+  })
+
+  it('returns steady when commitCount7d >= 2', () => {
+    expect(getChurnLabel(activity('/x.js', { commitCount7d: 2, commitCount30d: 2 }))).toBe('steady')
+  })
+
+  it('returns steady when commitCount30d >= 5', () => {
+    expect(getChurnLabel(activity('/x.js', { commitCount7d: 0, commitCount30d: 5 }))).toBe('steady')
+  })
+
+  it('returns light for any commits in last 30d below steady threshold', () => {
+    expect(getChurnLabel(activity('/x.js', { commitCount7d: 1, commitCount30d: 4 }))).toBe('light')
+  })
+
+  it('high churn beats steady (7d threshold)', () => {
+    expect(getChurnLabel(activity('/x.js', { commitCount7d: 6, commitCount30d: 20 }))).toBe('high churn')
+  })
+})
+
+// ── computeActivityLevelCounts ────────────────────────────────────────────────
+
+describe('computeActivityLevelCounts', () => {
+  it('returns all zeros for empty node list', () => {
+    const counts = computeActivityLevelCounts([], {})
+    expect(counts).toEqual({ hot: 0, warm: 0, cool: 0, stale: 0, unknown: 0 })
+  })
+
+  it('counts unknown for untracked file node', () => {
+    const counts = computeActivityLevelCounts([file('x.js', '/x.js')], {})
+    expect(counts.unknown).toBe(1)
+  })
+
+  it('counts hot for file with commit < 24h', () => {
+    const recent = new Date(Date.now() - 3600000).toISOString()
+    const index = { '/a.js': activity('/a.js', { lastCommitAt: recent }) }
+    const counts = computeActivityLevelCounts([file('a.js', '/a.js')], index)
+    expect(counts.hot).toBe(1)
+    expect(counts.warm).toBe(0)
+  })
+
+  it('counts stale for file with null lastCommitAt', () => {
+    const index = { '/a.js': activity('/a.js') }
+    const counts = computeActivityLevelCounts([file('a.js', '/a.js')], index)
+    expect(counts.stale).toBe(1)
+  })
+
+  it('aggregates folder node activity before counting', () => {
+    const recent = new Date(Date.now() - 3600000).toISOString()
+    const parent = folder('root', '/root', [file('a.js', '/root/a.js')])
+    const index = { '/root/a.js': activity('/root/a.js', { lastCommitAt: recent }) }
+    const counts = computeActivityLevelCounts([parent], index)
+    expect(counts.hot).toBe(1)
+    expect(counts.unknown).toBe(0)
+  })
+
+  it('counts folder with no tracked children as unknown', () => {
+    const parent = folder('empty', '/empty', [file('x.js', '/empty/x.js')])
+    const counts = computeActivityLevelCounts([parent], {})
+    expect(counts.unknown).toBe(1)
+  })
+
+  it('accumulates across multiple nodes', () => {
+    const recent = new Date(Date.now() - 3600000).toISOString()
+    const old    = new Date(Date.now() - 45 * 86400000).toISOString()
+    const nodes = [file('a.js', '/a.js'), file('b.js', '/b.js'), file('c.js', '/c.js')]
+    const index = {
+      '/a.js': activity('/a.js', { lastCommitAt: recent }),
+      '/b.js': activity('/b.js', { lastCommitAt: old }),
+    }
+    const counts = computeActivityLevelCounts(nodes, index)
+    expect(counts.hot).toBe(1)
+    expect(counts.stale).toBe(1)
+    expect(counts.unknown).toBe(1)
   })
 })
