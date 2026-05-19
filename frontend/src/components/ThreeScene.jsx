@@ -129,10 +129,22 @@ function StarField() {
   )
 }
 
-function KeyboardLegend() {
+function KeyboardLegend({ colorTheme = 'dark' }) {
   const [open, setOpen] = useState(false)
   const [panelPos, setPanelPos] = useState({ x: 0, y: 0 })
   const btnRef = useRef(null)
+  const isLight = colorTheme === 'light'
+  const btnBg      = isLight ? 'rgba(235,242,252,0.88)' : 'rgba(10,10,28,0.88)'
+  const btnBorder  = isLight ? 'rgba(0,96,128,0.3)'    : 'rgba(124,157,245,0.45)'
+  const btnColor   = isLight ? '#3a5070'               : '#a0a8d0'
+  const btnHovBdr  = isLight ? 'rgba(0,96,128,0.7)'    : 'rgba(124,157,245,0.8)'
+  const btnHovClr  = isLight ? '#006080'               : '#e2e2f2'
+  const panelBg    = isLight ? 'rgba(240,245,252,0.97)' : 'rgba(6,6,18,0.97)'
+  const panelBdr   = isLight ? 'rgba(0,96,128,0.14)'   : 'rgba(124,157,245,0.18)'
+  const kbdColor   = isLight ? '#006080'               : '#7c9df5'
+  const kbdBg      = isLight ? 'rgba(0,96,128,0.08)'   : 'rgba(124,157,245,0.1)'
+  const kbdBdr     = isLight ? 'rgba(0,96,128,0.18)'   : 'rgba(124,157,245,0.22)'
+  const labelColor = isLight ? 'rgba(30,60,100,0.75)'  : 'rgba(200,200,230,0.7)'
   const shortcuts = [
     ['⌘K',        'Search nodes'],
     ['S',         'Settings'],
@@ -162,11 +174,11 @@ function KeyboardLegend() {
         ref={btnRef}
         onClick={handleToggle}
         style={{
-          background: 'rgba(10,10,28,0.88)',
-          border: '1px solid rgba(124,157,245,0.45)',
+          background: btnBg,
+          border: `1px solid ${btnBorder}`,
           borderRadius: '50%',
           width: 26, height: 26,
-          color: '#a0a8d0',
+          color: btnColor,
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -174,12 +186,12 @@ function KeyboardLegend() {
           backdropFilter: 'blur(8px)',
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
-          e.currentTarget.style.color = '#e2e2f2'
+          e.currentTarget.style.borderColor = btnHovBdr
+          e.currentTarget.style.color = btnHovClr
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
-          e.currentTarget.style.color = '#a0a8d0'
+          e.currentTarget.style.borderColor = btnBorder
+          e.currentTarget.style.color = btnColor
         }}
       >?</button>
 
@@ -188,8 +200,8 @@ function KeyboardLegend() {
           position: 'fixed',
           left: panelPos.x,
           top: panelPos.y,
-          background: 'rgba(6,6,18,0.97)',
-          border: '1px solid rgba(124,157,245,0.18)',
+          background: panelBg,
+          border: `1px solid ${panelBdr}`,
           borderRadius: 10,
           backdropFilter: 'blur(16px)',
           padding: '10px 14px',
@@ -204,15 +216,15 @@ function KeyboardLegend() {
             }}>
               <kbd style={{
                 fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 10, color: '#7c9df5',
-                background: 'rgba(124,157,245,0.1)',
-                border: '1px solid rgba(124,157,245,0.22)',
+                fontSize: 10, color: kbdColor,
+                background: kbdBg,
+                border: `1px solid ${kbdBdr}`,
                 borderRadius: 4, padding: '1px 6px',
                 whiteSpace: 'nowrap',
               }}>{key}</kbd>
               <span style={{
                 fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 10, color: 'rgba(200,200,230,0.7)',
+                fontSize: 10, color: labelColor,
                 textAlign: 'right',
               }}>{label}</span>
             </div>
@@ -223,21 +235,22 @@ function KeyboardLegend() {
   )
 }
 
-function ZoomHint() {
+function ZoomHint({ colorTheme = 'dark' }) {
   const [visible, setVisible] = useState(true)
   useEffect(() => {
     const t = setTimeout(() => setVisible(false), 3500)
     return () => clearTimeout(t)
   }, [])
   if (!visible) return null
+  const isLight = colorTheme === 'light'
   return (
     <div style={{
       position: 'fixed', bottom: 52, right: 20,
-      color: 'rgba(180,185,230,0.85)',
+      color: isLight ? 'rgba(30,60,100,0.65)' : 'rgba(180,185,230,0.85)',
       fontFamily: "'JetBrains Mono', monospace",
       fontSize: 10, letterSpacing: '0.08em',
-      background: 'rgba(6,6,18,0.82)',
-      border: '1px solid rgba(124,157,245,0.18)',
+      background: isLight ? 'rgba(235,242,252,0.92)' : 'rgba(6,6,18,0.82)',
+      border: `1px solid ${isLight ? 'rgba(0,96,128,0.18)' : 'rgba(124,157,245,0.18)'}`,
       borderRadius: 8,
       padding: '6px 10px',
       backdropFilter: 'blur(8px)',
@@ -436,6 +449,7 @@ function SceneObjects({
               revealProgress={revealProgress}
               delay={delay}
               isSelected={selectedNodeId === node.id}
+              isDimmed={selectedNodeId != null && selectedNodeId !== node.id}
               showLabel={showLabels && hoveredId !== node.id}
               index={i}
               activityMode={activityMode}
@@ -733,6 +747,12 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
   }, [settingsOpen, searchOpen, selectedNode, parentNode, handleNodeDoubleClick, handleRescan, onChangeRoot])
 
   const showBack = navStack.length > 1
+  const isLight = settings.colorTheme === 'light'
+  const chromeBg     = isLight ? 'rgba(235,242,252,0.88)' : 'rgba(10,10,28,0.88)'
+  const chromeBdr    = isLight ? 'rgba(0,96,128,0.28)'    : 'rgba(124,157,245,0.45)'
+  const chromeColor  = isLight ? '#3a5070'                : '#a0a8d0'
+  const chromeHovBdr = isLight ? 'rgba(0,96,128,0.65)'    : 'rgba(124,157,245,0.8)'
+  const chromeHovClr = isLight ? '#006080'                : '#e2e2f2'
 
   return (
     <>
@@ -792,7 +812,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           )}
         </Canvas>
       </div>
-      <ZoomHint />
+      <ZoomHint colorTheme={settings.colorTheme} />
       {capInfo?.capped && (
         <OverflowBadge total={capInfo.total} visible={capInfo.visible} />
       )}
@@ -806,9 +826,11 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           zIndex: 90,
           width: 26, height: 26,
           borderRadius: '50%',
-          background: settingsOpen ? 'rgba(124,157,245,0.15)' : 'rgba(10,10,28,0.88)',
-          border: `1px solid ${settingsOpen ? 'rgba(124,157,245,0.7)' : 'rgba(124,157,245,0.45)'}`,
-          color: settingsOpen ? '#e2e2f2' : '#a0a8d0',
+          background: settingsOpen
+            ? (isLight ? 'rgba(0,96,128,0.12)' : 'rgba(124,157,245,0.15)')
+            : chromeBg,
+          border: `1px solid ${settingsOpen ? chromeHovBdr : chromeBdr}`,
+          color: settingsOpen ? chromeHovClr : chromeColor,
           fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
@@ -816,14 +838,14 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         }}
         onMouseEnter={e => {
           if (!settingsOpen) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
-            e.currentTarget.style.color = '#e2e2f2'
+            e.currentTarget.style.borderColor = chromeHovBdr
+            e.currentTarget.style.color = chromeHovClr
           }
         }}
         onMouseLeave={e => {
           if (!settingsOpen) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
-            e.currentTarget.style.color = '#a0a8d0'
+            e.currentTarget.style.borderColor = chromeBdr
+            e.currentTarget.style.color = chromeColor
           }
         }}
         aria-label="Settings"
@@ -841,21 +863,21 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           zIndex: 90,
           width: 26, height: 26,
           borderRadius: '50%',
-          background: 'rgba(10,10,28,0.88)',
-          border: '1px solid rgba(124,157,245,0.45)',
-          color: '#a0a8d0',
+          background: chromeBg,
+          border: `1px solid ${chromeBdr}`,
+          color: chromeColor,
           fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
         }}
         onMouseEnter={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
-          e.currentTarget.style.color = '#e2e2f2'
+          e.currentTarget.style.borderColor = chromeHovBdr
+          e.currentTarget.style.color = chromeHovClr
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
-          e.currentTarget.style.color = '#a0a8d0'
+          e.currentTarget.style.borderColor = chromeBdr
+          e.currentTarget.style.color = chromeColor
         }}
         aria-label="Export markdown"
         title="Export snapshot (.md)"
@@ -874,9 +896,9 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           zIndex: 90,
           width: 26, height: 26,
           borderRadius: '50%',
-          background: shareCopied ? 'rgba(78,205,196,0.15)' : 'rgba(10,10,28,0.88)',
-          border: `1px solid ${shareCopied ? 'rgba(78,205,196,0.6)' : 'rgba(124,157,245,0.45)'}`,
-          color: shareCopied ? '#4ecdc4' : '#a0a8d0',
+          background: shareCopied ? (isLight ? 'rgba(0,96,128,0.12)' : 'rgba(78,205,196,0.15)') : chromeBg,
+          border: `1px solid ${shareCopied ? (isLight ? 'rgba(0,96,128,0.5)' : 'rgba(78,205,196,0.6)') : chromeBdr}`,
+          color: shareCopied ? (isLight ? '#006080' : '#4ecdc4') : chromeColor,
           fontSize: 11, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
@@ -884,14 +906,14 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         }}
         onMouseEnter={e => {
           if (!shareCopied) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.8)'
-            e.currentTarget.style.color = '#e2e2f2'
+            e.currentTarget.style.borderColor = chromeHovBdr
+            e.currentTarget.style.color = chromeHovClr
           }
         }}
         onMouseLeave={e => {
           if (!shareCopied) {
-            e.currentTarget.style.borderColor = 'rgba(124,157,245,0.45)'
-            e.currentTarget.style.color = '#a0a8d0'
+            e.currentTarget.style.borderColor = chromeBdr
+            e.currentTarget.style.color = chromeColor
           }
         }}
         aria-label="Copy share link"
@@ -905,7 +927,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           onRescan={handleRescan}
         />
       )}
-      <KeyboardLegend />
+      <KeyboardLegend colorTheme={settings.colorTheme} />
       {settings.activityMode && (
         <ActivityLegend
           summary={activitySummary}
@@ -945,6 +967,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
       {showBack && (
         <BackToProjectsButton
           visible={true}
+          colorTheme={settings.colorTheme}
           onReset={() => {
             setNavStack([originalRootRef.current])
             setSelectedNode(null)

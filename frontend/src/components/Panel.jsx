@@ -573,67 +573,73 @@ export default function Panel({
       background: pc.bg,
       borderLeft: `1px solid ${pc.border}`,
       zIndex: 500,
-      overflowY: 'auto',
-      padding: '20px 16px 32px',
+      display: 'flex', flexDirection: 'column',
       boxShadow: pc.shadow,
       fontFamily: SANS,
       transform: mounted ? 'translateX(0)' : 'translateX(100%)',
       transition: 'transform 240ms cubic-bezier(0.16,1,0.3,1)',
     }}>
 
-      {/* ── SECTION 1: NODE HEADER ─────────────────────── */}
-      <div style={{ paddingRight: 56, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 5 }}>
-          <span style={{
-            fontSize: 18, fontWeight: 700, color: pc.textPrimary,
-            letterSpacing: '-0.02em',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
-          }}>
-            {node.name}
-          </span>
-          <span style={{
-            fontFamily: MONO, fontSize: 10, fontWeight: 600,
-            letterSpacing: '0.05em', textTransform: 'uppercase',
-            background: typeColor + '22', color: typeColor,
-            border: `1px solid ${typeColor}44`,
-            borderRadius: 4, padding: '1px 6px', flexShrink: 0,
-          }}>{typeBadge}</span>
-        </div>
-        <div style={{ fontFamily: MONO, fontSize: 11, color: pc.textMuted, wordBreak: 'break-all', lineHeight: 1.5 }}>
-          {relPath}
+      {/* ── STICKY HEADER ─────────────────────────────────── */}
+      <div style={{
+        flexShrink: 0,
+        padding: '16px 16px 12px',
+        borderBottom: `1px solid ${pc.sep}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 4 }}>
+              <span style={{
+                fontSize: 17, fontWeight: 700, color: pc.textPrimary,
+                letterSpacing: '-0.02em',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
+              }}>
+                {node.name}
+              </span>
+              <span style={{
+                fontFamily: MONO, fontSize: 10, fontWeight: 600,
+                letterSpacing: '0.05em', textTransform: 'uppercase',
+                background: typeColor + '22', color: typeColor,
+                border: `1px solid ${typeColor}44`,
+                borderRadius: 4, padding: '1px 6px', flexShrink: 0,
+              }}>{typeBadge}</span>
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 11, color: pc.textMuted, wordBreak: 'break-all', lineHeight: 1.5 }}>
+              {relPath}
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
+            {onPin && (
+              <button
+                onClick={isPinned ? onUnpin : onPin}
+                title={isPinned ? 'Unpin' : 'Pin'}
+                style={{
+                  background: 'none', border: 'none',
+                  color: isPinned ? '#ffd93d' : pc.textMuted,
+                  cursor: 'pointer', fontSize: 13, lineHeight: 1, padding: '2px 4px',
+                  transition: 'color 0.15s, transform 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.25)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >{isPinned ? '★' : '☆'}</button>
+            )}
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none', border: 'none',
+                color: pc.textMuted, fontSize: 18,
+                cursor: 'pointer', lineHeight: 1, padding: '0 4px',
+                transition: 'color 0.12s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = pc.textPrimary}
+              onMouseLeave={e => e.currentTarget.style.color = pc.textMuted}
+            >×</button>
+          </div>
         </div>
       </div>
 
-      {/* Pin + Close absolute buttons */}
-      {onPin && (
-        <button
-          onClick={isPinned ? onUnpin : onPin}
-          title={isPinned ? 'Unpin' : 'Pin'}
-          style={{
-            position: 'absolute', top: 16, right: 42,
-            background: 'none', border: 'none',
-            color: isPinned ? '#ffd93d' : 'rgba(110,110,158,0.35)',
-            cursor: 'pointer', fontSize: 13, lineHeight: 1,
-            transition: 'color 0.15s, transform 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.25)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-        >{isPinned ? '★' : '☆'}</button>
-      )}
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute', top: 14, right: 14,
-          background: 'none', border: 'none',
-          color: pc.textMuted, fontSize: 18,
-          cursor: 'pointer', lineHeight: 1, padding: '0 2px',
-          transition: 'color 0.12s',
-        }}
-        onMouseEnter={e => e.currentTarget.style.color = pc.textPrimary}
-        onMouseLeave={e => e.currentTarget.style.color = pc.textMuted}
-      >×</button>
-
-      <div style={{ height: 1, background: pc.sep, margin: '0 0 14px' }} />
+      {/* ── SCROLLABLE BODY ───────────────────────────────── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px 32px' }}>
 
       {/* ── SECTION 2: METRICS ROW ──────────────────────── */}
       {metrics.length > 0 && (
@@ -725,6 +731,8 @@ export default function Panel({
             })}
         </div>
       </div>
+
+      </div> {/* end scrollable body */}
     </div>
   )
 }
