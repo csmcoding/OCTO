@@ -80,12 +80,13 @@ export function buildMetrics(node, activeSignals, depth) {
   ].filter(Boolean)
 }
 
-export function buildActions(node, { onDrillIn, onRescan, onExport } = {}) {
+export function buildActions(node, { onDrillIn, onRescan, onExport, rootPath } = {}) {
   return [
-    node.type === 'folder' && onDrillIn && { key: 'drill',  icon: '⟫', label: 'Drill in',   onClick: () => onDrillIn(node) },
-    onRescan                             && { key: 'rescan', icon: '↻', label: 'Rescan',      onClick: onRescan },
-                                            { key: 'copy',   icon: '⧉', label: 'Copy path',  onClick: null },
-    onExport                             && { key: 'export', icon: '↓', label: 'Export',      onClick: onExport },
+    node.type === 'folder' && onDrillIn && { key: 'drill',    icon: '⟫', label: 'Drill in',        onClick: () => onDrillIn(node) },
+    onRescan                             && { key: 'rescan',   icon: '↻', label: 'Rescan',           onClick: onRescan },
+                                            { key: 'copy',     icon: '⧉', label: 'Copy path',       onClick: null },
+    rootPath                             && { key: 'copyRel',  icon: '⧉', label: 'Copy rel path',   onClick: null },
+    onExport                             && { key: 'export',   icon: '↓', label: 'Export',           onClick: onExport },
   ].filter(Boolean)
 }
 
@@ -341,9 +342,10 @@ function GitDiffSection({ gitDiff, pc }) {
 }
 
 const OPEN_ACTIONS = [
-  { action: 'editor',   label: 'Open in Cursor',  foldersOnly: false },
-  { action: 'files',    label: 'Open in Dolphin', foldersOnly: true  },
-  { action: 'terminal', label: 'Open in Konsole', foldersOnly: true  },
+  { action: 'editor',   label: 'Open in Cursor',   foldersOnly: false, filesOnly: false },
+  { action: 'reveal',   label: 'Reveal in files',  foldersOnly: false, filesOnly: true  },
+  { action: 'files',    label: 'Open in Dolphin',  foldersOnly: true,  filesOnly: false },
+  { action: 'terminal', label: 'Open in Konsole',  foldersOnly: true,  filesOnly: false },
 ]
 
 function openStatusLabel(status, defaultLabel) {
@@ -547,10 +549,11 @@ export default function Panel({
   colorTheme = 'dark',
 }) {
   const pc = getPanelColors(colorTheme)
-  const [mounted, setMounted]     = useState(false)
+  const [mounted, setMounted]       = useState(false)
   const [openStatus, setOpenStatus] = useState({})
-  const [hoverBtn, setHoverBtn]   = useState(null)
-  const [copiedPath, setCopiedPath] = useState(false)
+  const [hoverBtn, setHoverBtn]     = useState(null)
+  const [copiedPath, setCopiedPath]       = useState(false)
+  const [copiedRelPath, setCopiedRelPath] = useState(false)
 
   const gitDiff      = useGitDiff(node)
   const activeSignals = getActiveSignals(node)
@@ -592,10 +595,20 @@ export default function Panel({
     }).catch(() => {})
   }
 
+  const handleCopyRelPath = () => {
+    const rel = rootPath && node.path.startsWith(rootPath)
+      ? node.path.slice(rootPath.length).replace(/^\//, '') || node.name
+      : node.path
+    navigator.clipboard.writeText(rel).then(() => {
+      setCopiedRelPath(true)
+      setTimeout(() => setCopiedRelPath(false), 1500)
+    }).catch(() => {})
+  }
+
   const typeColor  = node.type === 'folder' ? '#c8a2ff' : '#4ecdc4'
   const typeBadge  = buildTypeBadge(node)
   const metrics    = buildMetrics(node, activeSignals, depth)
-  const actionBtns = buildActions(node, { onDrillIn, onRescan, onExport })
+  const actionBtns = buildActions(node, { onDrillIn, onRescan, onExport, rootPath })
 
   return (
     <div style={{
@@ -720,13 +733,14 @@ export default function Panel({
           {actionBtns.map(({ key, icon, label, onClick }) => (
             <button
               key={key}
-              onClick={key === 'copy' ? handleCopyPath : onClick}
+              onClick={key === 'copy' ? handleCopyPath : key === 'copyRel' ? handleCopyRelPath : onClick}
               style={{
                 fontFamily: MONO, fontSize: 11,
                 padding: '5px 10px', borderRadius: 6,
                 background: hoverBtn === key ? pc.actionBgHov : pc.actionBg,
                 border: `1px solid ${hoverBtn === key ? pc.actionBorderHov : pc.actionBorder}`,
-                color: key === 'copy' && copiedPath ? pc.clean : hoverBtn === key ? pc.actionColorHov : pc.actionColor,
+                color: (key === 'copy' && copiedPath) || (key === 'copyRel' && copiedRelPath)
+                  ? pc.clean : hoverBtn === key ? pc.actionColorHov : pc.actionColor,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5,
                 transition: 'background 0.12s, border-color 0.12s, color 0.12s',
               }}
@@ -734,11 +748,14 @@ export default function Panel({
               onMouseLeave={() => setHoverBtn(null)}
             >
               <span style={{ fontSize: 12 }}>{icon}</span>
-              <span>{key === 'copy' && copiedPath ? 'Copied!' : label}</span>
+              <span>{key === 'copy' && copiedPath ? 'Copied!' : key === 'copyRel' && copiedRelPath ? 'Copied!' : label}</span>
             </button>
           ))}
           {OPEN_ACTIONS
-            .filter(({ foldersOnly }) => !foldersOnly || node.type === 'folder')
+            .filter(({ foldersOnly, filesOnly }) =>
+              (!foldersOnly || node.type === 'folder') &&
+              (!filesOnly   || node.type === 'file')
+            )
             .map(({ action, label }) => {
               const st  = openStatusLabel(openStatus[action], label)
               const key = `open-${action}`
