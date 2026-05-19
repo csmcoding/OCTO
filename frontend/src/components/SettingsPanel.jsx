@@ -166,10 +166,24 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
           display: 'flex', justifyContent: 'space-between',
           alignItems: 'center', marginBottom: 12,
         }}>
-          <div style={{
-            fontFamily: SANS, fontSize: 13, fontWeight: 600,
-            color: '#e2e2f2', letterSpacing: '-0.01em',
-          }}>Settings</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              fontFamily: SANS, fontSize: 13, fontWeight: 600,
+              color: '#e2e2f2', letterSpacing: '-0.01em',
+            }}>Settings</div>
+            {(settings.activityMode || settings.archMode) && (
+              <span style={{
+                fontFamily: MONO, fontSize: 9, fontWeight: 600,
+                color: settings.activityMode ? '#ff6b35' : '#a78bfa',
+                background: settings.activityMode ? 'rgba(255,107,53,0.12)' : 'rgba(167,139,250,0.12)',
+                border: `1px solid ${settings.activityMode ? 'rgba(255,107,53,0.3)' : 'rgba(167,139,250,0.3)'}`,
+                borderRadius: 4, padding: '1px 6px',
+                letterSpacing: '0.04em',
+              }}>
+                {settings.activityMode ? 'Activity' : 'Architecture'}
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             style={{

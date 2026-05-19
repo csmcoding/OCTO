@@ -131,7 +131,7 @@ function StarField() {
   )
 }
 
-function KeyboardLegend({ colorTheme = 'dark' }) {
+function KeyboardLegend({ colorTheme = 'dark', activityMode = false, archMode = false }) {
   const [open, setOpen] = useState(false)
   const [panelPos, setPanelPos] = useState({ x: 0, y: 0 })
   const btnRef = useRef(null)
@@ -163,8 +163,8 @@ function KeyboardLegend({ colorTheme = 'dark' }) {
   const handleToggle = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      const panelH = 180
-      const panelW = 230
+      const panelH = 310
+      const panelW = 240
       const x = Math.max(8, Math.min(rect.left, window.innerWidth - panelW - 8))
       const y = Math.max(8, rect.top - panelH - 8)
       setPanelPos({ x, y })
@@ -209,10 +209,59 @@ function KeyboardLegend({ colorTheme = 'dark' }) {
           borderRadius: 10,
           backdropFilter: 'blur(16px)',
           padding: '10px 14px',
-          minWidth: 200,
+          minWidth: 220,
           animation: 'fadeIn 0.15s ease',
           zIndex: 91,
         }}>
+          {/* LENSES section */}
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: kbdColor, opacity: 0.7, marginBottom: 5,
+          }}>Lenses</div>
+          {[
+            ['Filesystem',    'explore structure',   null      ],
+            ['Architecture',  'code roles  [A]',     '#a78bfa' ],
+            ['Activity',      'git recency  [T]',    '#ff6b35' ],
+          ].map(([name, desc, color]) => {
+            const isActive = (name === 'Activity' && activityMode)
+              || (name === 'Architecture' && archMode)
+              || (name === 'Filesystem' && !activityMode && !archMode)
+            return (
+              <div key={name} style={{
+                display: 'flex', justifyContent: 'space-between',
+                alignItems: 'center', gap: 12, padding: '2px 0',
+              }}>
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  color: isActive ? (color ?? kbdColor) : labelColor,
+                  fontWeight: isActive ? 700 : 400,
+                  whiteSpace: 'nowrap',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  {isActive && (
+                    <span style={{ fontSize: 6, color: color ?? kbdColor }}>●</span>
+                  )}
+                  {name}
+                </span>
+                <span style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 9,
+                  color: isActive ? (isLight ? 'rgba(30,30,60,0.6)' : 'rgba(200,200,230,0.55)') : 'rgba(140,140,180,0.38)',
+                  textAlign: 'right', whiteSpace: 'nowrap',
+                }}>{desc}</span>
+              </div>
+            )
+          })}
+          <div style={{ borderTop: `1px solid ${panelBdr}`, margin: '7px 0 5px' }} />
+
+          {/* SHORTCUTS section */}
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 8, letterSpacing: '0.1em', textTransform: 'uppercase',
+            color: kbdColor, opacity: 0.7, marginBottom: 5,
+          }}>Shortcuts</div>
           {shortcuts.map(([key, label]) => (
             <div key={key} style={{
               display: 'flex', justifyContent: 'space-between',
@@ -952,7 +1001,11 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           onRescan={handleRescan}
         />
       )}
-      <KeyboardLegend colorTheme={settings.colorTheme} />
+      <KeyboardLegend
+        colorTheme={settings.colorTheme}
+        activityMode={settings.activityMode}
+        archMode={settings.archMode}
+      />
       {settings.activityMode && (
         <ActivityLegend
           summary={activitySummary}
@@ -979,6 +1032,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         colorTheme={settings.colorTheme}
         activityMode={settings.activityMode}
         activityIndex={settings.activityMode ? (activityData?.byPath ?? null) : null}
+        archMode={settings.archMode}
       />
       <PinTray pins={pins} onJump={handleJump} onUnpin={handleUnpin} />
       <NodeTooltip

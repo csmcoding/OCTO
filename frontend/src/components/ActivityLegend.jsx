@@ -34,6 +34,15 @@ export default function ActivityLegend({ summary, unavailable, levelCounts = nul
         </div>
       ) : (
         <>
+          <div style={{
+            fontFamily: MONO, fontSize: 8,
+            color: isLight ? 'rgba(0,80,140,0.6)' : 'rgba(255,107,53,0.8)',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+            marginBottom: summary ? 4 : 6,
+            fontWeight: 600,
+          }}>
+            Activity mode
+          </div>
           {summary && (
             <div style={{
               fontFamily: MONO, fontSize: 8,
