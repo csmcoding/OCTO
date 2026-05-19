@@ -203,9 +203,23 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
         />
         <Toggle
           on={settings.activityMode}
-          onChange={() => setSetting('activityMode', !settings.activityMode)}
+          onChange={() => {
+            const next = !settings.activityMode
+            setSetting('activityMode', next)
+            if (next) setSetting('archMode', false)
+          }}
           label="Activity mode  [T]"
           description="Overlay git recency and churn"
+        />
+        <Toggle
+          on={settings.archMode}
+          onChange={() => {
+            const next = !settings.archMode
+            setSetting('archMode', next)
+            if (next) setSetting('activityMode', false)
+          }}
+          label="Architecture mode  [A]"
+          description="Color nodes by code category"
         />
         <Slider
           value={settings.scanDepth}
@@ -255,6 +269,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
               setSetting('scanDepth', 2)
               setSetting('colorTheme', 'dark')
               setSetting('activityMode', false)
+              setSetting('archMode', false)
             }}
             title="Reset to dark theme defaults"
             style={{

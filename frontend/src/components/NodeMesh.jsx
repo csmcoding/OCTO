@@ -143,12 +143,13 @@ function NodeMesh({
   activityLevel = null,
   isActivityDirty = false,
   colorTheme = 'dark',
+  archColor = null,
 }) {
   const [isHovered, setIsHovered] = useState(false)
   const activeSignals = getActiveSignals(node)
   const hasSignals = activeSignals.length > 0
 
-  const nodeColor = isSelected ? PALETTE.selected : getNodeColor(node)
+  const nodeColor = isSelected ? PALETTE.selected : (archColor ?? getNodeColor(node))
   const auraColor = SIGNAL_COLORS[activeSignals[0]] ?? '#4ecdc4'
 
   const baseRadius = node.type === 'folder'

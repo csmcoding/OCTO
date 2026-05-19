@@ -8,6 +8,7 @@ import { exportMarkdown, downloadMarkdown } from '../utils/exportMarkdown'
 import { buildTentacleLayout } from '../utils/buildTentacleLayout'
 import { useRevealProgress } from '../utils/useAnimationClock'
 import { getNodeColor, THEMES } from '../utils/palette'
+import { classifyNode, CLUSTERS, summarizeFolderClusters } from '../utils/archClassify'
 import Tentacle from './Tentacle'
 import NodeMesh from './NodeMesh'
 import MarineSnow from './MarineSnow'
@@ -22,6 +23,7 @@ import Minimap from './Minimap'
 import PinTray from './PinTray'
 import SettingsPanel from './SettingsPanel'
 import ActivityLegend from './ActivityLegend'
+import ArchLegend from './ArchLegend'
 import { loadActivity } from '../utils/loadActivity'
 import { getNodeActivity, aggregateFolderActivity, getActivityLevel, computeActivitySummary } from '../utils/activityAggregate'
 
@@ -149,6 +151,8 @@ function KeyboardLegend({ colorTheme = 'dark' }) {
     ['⌘K',        'Search nodes'],
     ['S',         'Settings'],
     ['R',         'Rescan'],
+    ['T',         'Activity mode'],
+    ['A',         'Architecture mode'],
     ['O',         'Change directory'],
     ['Enter',     'Open selected'],
     ['Backspace', 'Go up one level'],
@@ -325,6 +329,7 @@ function SceneObjects({
   hoveredId, onHoveredChange, onLayoutReady, onCapInfo,
   showLabels, sway, colorTheme,
   activityMode, activityIndex,
+  archMode = false,
 }) {
   const children = currentRoot?.children ?? []
   const isCapped = children.length > SCENE_NODE_CAP
@@ -420,7 +425,8 @@ function SceneObjects({
 
       {layout.map(({ node, endPosition, curve, basePoints }, i) => {
         const isHovered = hoveredId === node.id
-        const color = getNodeColor(node)
+        const archColor = archMode ? (CLUSTERS[classifyNode(node).cluster]?.color ?? null) : null
+        const color = archColor ?? getNodeColor(node)
         const delay = i * 0.045
         const activityItem = activityMode && activityIndex
           ? (node.type === 'folder'
@@ -456,6 +462,7 @@ function SceneObjects({
               activityLevel={activityLevel}
               isActivityDirty={activityItem?.isDirty ?? false}
               colorTheme={colorTheme}
+              archColor={archColor}
               onPointerEnter={(n, e) => {
                 onHoveredChange(node.id)
                 onHoverPosition?.(endPosition)
@@ -508,6 +515,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
     scanDepth:    2,
     colorTheme:   'dark',
     activityMode: false,
+    archMode:     false,
   })
   const [activityData, setActivityData] = useState(null)
   const [shareCopied, setShareCopied] = useState(false)
@@ -519,6 +527,8 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
   scanDepthRef.current = settings.scanDepth
   const activityModeRef = useRef(false)
   activityModeRef.current = settings.activityMode
+  const archModeRef = useRef(false)
+  archModeRef.current = settings.archMode
   const originalRootRef = useRef(null)
   const navStackRef = useRef([])
   navStackRef.current = navStack
@@ -719,7 +729,14 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
       }
 
       if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey) {
-        setSetting('activityMode', !activityModeRef.current)
+        const next = !activityModeRef.current
+        setSettings(prev => ({ ...prev, activityMode: next, ...(next ? { archMode: false } : {}) }))
+        return
+      }
+
+      if ((e.key === 'a' || e.key === 'A') && !e.metaKey && !e.ctrlKey) {
+        const next = !archModeRef.current
+        setSettings(prev => ({ ...prev, archMode: next, ...(next ? { activityMode: false } : {}) }))
         return
       }
 
@@ -808,6 +825,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
               colorTheme={settings.colorTheme}
               activityMode={settings.activityMode}
               activityIndex={activityData?.byPath ?? null}
+              archMode={settings.archMode}
             />
           )}
         </Canvas>
@@ -935,6 +953,12 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           colorTheme={settings.colorTheme}
         />
       )}
+      {settings.archMode && (
+        <ArchLegend
+          summary={currentRoot ? summarizeFolderClusters(currentRoot) : null}
+          colorTheme={settings.colorTheme}
+        />
+      )}
       <Minimap
         nodes={layout}
         selectedNodeId={selectedNode?.id}
@@ -965,6 +989,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
           activityMode={settings.activityMode}
           activityItem={selectedActivityItem}
           colorTheme={settings.colorTheme}
+          archMode={settings.archMode}
         />
       )}
       {showBack && (
@@ -1004,6 +1029,7 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         onDrillToNode={handleSearchDrillToNode}
         colorTheme={settings.colorTheme}
         activityIndex={settings.activityMode ? (activityData?.byPath ?? null) : null}
+        archMode={settings.archMode}
       />
     </>
   )

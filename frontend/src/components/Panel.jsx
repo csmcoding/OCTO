@@ -5,6 +5,7 @@ import { openNode } from '../utils/loadTree'
 import { useGitDiff } from '../hooks/useGitDiff'
 import { summarizeActivity } from '../utils/loadActivity'
 import { getActivityLevel } from '../utils/activityAggregate'
+import { classifyNode, CLUSTERS } from '../utils/archClassify'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
@@ -548,6 +549,7 @@ export default function Panel({
   activityMode = false,
   activityItem = null,
   colorTheme = 'dark',
+  archMode = false,
 }) {
   const pc = getPanelColors(colorTheme)
   const [mounted, setMounted]       = useState(false)
@@ -748,6 +750,31 @@ export default function Panel({
           {metrics.map(m => <MetricChip key={m.label} icon={m.icon} value={m.value} label={m.label} pc={pc} />)}
         </div>
       )}
+
+      {/* ── SECTION 2b: ARCH CLUSTER ───────────────────── */}
+      {archMode && (() => {
+        const arch = classifyNode(node)
+        const cl   = CLUSTERS[arch.cluster] ?? CLUSTERS.other
+        return (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontFamily: MONO, fontSize: 9, color: pc.textLabel, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
+              Architecture
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{
+                fontFamily: MONO, fontSize: 10, fontWeight: 600,
+                color: cl.color,
+                background: cl.color + '20',
+                border: `1px solid ${cl.color}44`,
+                borderRadius: 4, padding: '2px 8px',
+              }}>{cl.label}</span>
+              <span style={{ fontFamily: MONO, fontSize: 9, color: pc.textMuted }}>
+                {arch.reason}
+              </span>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ── SECTION 3: SIGNAL LIST ──────────────────────── */}
       <div style={{ marginBottom: 16 }}>
