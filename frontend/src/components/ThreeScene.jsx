@@ -991,6 +991,8 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
             const n = contextMenu.node
             pins.some(p => p.id === n.id) ? handleUnpin(n) : handlePin(n)
           }}
+          rootPath={currentRoot?.path}
+          colorTheme={settings.colorTheme}
         />
       )}
       <SearchPanel

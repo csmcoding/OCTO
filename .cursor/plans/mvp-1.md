@@ -1153,3 +1153,21 @@ Activity mode upgraded from a simple toggle/state into a real repo-timeline laye
 - Build clean (only pre-existing chunk size warning)
 
 **Next:** PROMPT 37 — desktop utility / context actions (Open in Cursor, Open in Finder/Dolphin, Copy Path, etc.) OR semantic clustering / architecture mode depending on product priority
+
+---
+
+## PROMPT 37 — Desktop Utility / Context Actions (complete)
+
+**Shipped:**
+- Backend: `"reveal"` action in `/open` endpoint — `dolphin --select <file>` for files; `dolphin <folder>` for folders
+- `NodeContextMenu`: added `colorTheme` support (full light/dark styles), `"Reveal in files"` for file nodes, `"Copy relative path"` for both types
+- `Panel`: added `"Reveal in files"` to `OPEN_ACTIONS` (file-only), `"Copy rel path"` button in actions row with confirmation flash, `buildActions` now accepts `rootPath` option
+- `SearchPanel`: `openNode` imported, compact `open ⬡` button visible on active result row; click opens in Cursor and closes panel
+- `ThreeScene`: passes `rootPath={currentRoot?.path}` and `colorTheme={settings.colorTheme}` to `NodeContextMenu`
+
+**New tests:**
+- `test_open.py`: 2 new — reveal-file uses `--select`, reveal-folder omits it
+- `NodeContextMenu.test.js`: 2 new — file menu has `reveal`, both menus have `copyRelPath`
+- `panel.test.js`: 1 new — `buildActions` includes `copyRel` when `rootPath` provided
+- Total: 178 frontend tests (was 175), 56 backend tests — all pass
+- Build clean

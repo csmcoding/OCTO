@@ -82,6 +82,14 @@ describe('Panel — actions row', () => {
     expect(folderActions.some(a => a.key === 'drill')).toBe(true)
     expect(fileActions.some(a => a.key === 'drill')).toBe(false)
   })
+
+  // 9. copyRel appears when rootPath is provided, absent otherwise
+  it('buildActions includes copyRel when rootPath is provided', () => {
+    const withRoot    = buildActions(makeFile(), { rootPath: '/home/user/project' })
+    const withoutRoot = buildActions(makeFile())
+    expect(withRoot.some(a => a.key === 'copyRel')).toBe(true)
+    expect(withoutRoot.some(a => a.key === 'copyRel')).toBe(false)
+  })
 })
 
 describe('Panel — copy path', () => {

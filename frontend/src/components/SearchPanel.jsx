@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { fuzzySearch } from '../utils/fuzzySearch.js'
 import { getActiveSignals, SIGNAL_COLORS } from '../utils/signals.js'
 import { getActivityLevel } from '../utils/activityAggregate.js'
+import { openNode } from '../utils/loadTree.js'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
@@ -88,7 +89,7 @@ function SignalDots({ node }) {
   )
 }
 
-function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, sc, activityLevel }) {
+function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, onQuickOpen, sc, activityLevel }) {
   const { node, matchReason } = result
   const path = relPath(node.path, rootPath)
   const displayPath = path.length > 60 ? '…' + path.slice(-60) : path
@@ -138,8 +139,28 @@ function ResultRow({ result, isActive, rootPath, onMouseEnter, onClick, sc, acti
         </div>
       </div>
 
-      {/* Right side: signal dots + activity badge + match reason */}
+      {/* Right side: open button (active row) + signal dots + activity badge + match reason */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0 }}>
+        {isActive && (
+          <button
+            onClick={e => { e.stopPropagation(); onQuickOpen?.(node.path) }}
+            title="Open in Cursor"
+            style={{
+              fontFamily: MONO, fontSize: 9,
+              padding: '2px 6px', borderRadius: 4,
+              background: 'rgba(124,157,245,0.10)',
+              border: '1px solid rgba(124,157,245,0.25)',
+              color: 'rgba(124,157,245,0.75)',
+              cursor: 'pointer', lineHeight: 1.4,
+              transition: 'border-color 0.1s, color 0.1s',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#7c9df5'; e.currentTarget.style.borderColor = 'rgba(124,157,245,0.5)' }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(124,157,245,0.75)'; e.currentTarget.style.borderColor = 'rgba(124,157,245,0.25)' }}
+          >
+            open ⬡
+          </button>
+        )}
         <SignalDots node={node} />
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
           {actColor && (
@@ -395,6 +416,7 @@ export default function SearchPanel({
                   rootPath={rootPath}
                   onMouseEnter={() => setSelectedIdx(i)}
                   onClick={() => onSelectNode?.(result.node)}
+                  onQuickOpen={(path) => { openNode(path, 'editor').catch(console.error); onClose?.() }}
                   sc={sc}
                   activityLevel={actLvl}
                 />
