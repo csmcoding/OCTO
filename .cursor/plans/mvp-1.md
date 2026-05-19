@@ -1171,3 +1171,66 @@ Activity mode upgraded from a simple toggle/state into a real repo-timeline laye
 - `panel.test.js`: 1 new — `buildActions` includes `copyRel` when `rootPath` provided
 - Total: 178 frontend tests (was 175), 56 backend tests — all pass
 - Build clean
+
+---
+
+## PROMPT 37 — Gap Fix (complete, `91ef29a`)
+
+**Status: COMPLETE**
+
+Two gaps from initial PROMPT 37 implementation were addressed:
+
+- Backend: `reveal` action now always uses `dolphin --select <path>` for both files and folders — selecting the item in its parent directory in both cases
+- Panel: action strip moved to the **top** of the scrollable body (immediately visible, no scroll required)
+- Panel: **"Open parent"** action added for folder nodes — computes parent path client-side, calls `files` backend action on it; covers spec goal #3 for folders
+- NodeContextMenu: **"Reveal in parent"** added to the folder menu (mirrors the file menu's "Reveal in files")
+
+**Spec coverage after this fix:**
+1. ✅ Open in Cursor — files + folders
+2. ✅ Reveal in file manager — files (Reveal in files), folders (Reveal in parent)
+3. ✅ Open parent folder — files (Reveal shows parent), folders (Open parent)
+4. ✅ Copy absolute path
+5. ✅ Copy relative path
+
+Tests: 179 frontend, 56 backend — all pass. Build clean.
+
+**Next:** PROMPT 38 — semantic clustering / architecture mode
+
+---
+
+## PROMPT 38 — Packaging Hardening + Alpha Ship Docs (complete, `60da044`)
+
+**Status: COMPLETE**
+
+**Architecture reality (confirmed):** Local FastAPI backend + React/Vite frontend. No Electron, no Tauri, no AppImage. Runs via `start.sh` on localhost.
+
+**Desktop utility actions (PROMPT 37):** Fully complete across all 9 spec goals in commits `be30803` and `91ef29a`. No further action required.
+
+**Packaging artifacts added:**
+- `requirements.txt` — exact versions: fastapi 0.136.1, uvicorn 0.47.0, pydantic 2.13.4
+- `install.sh` — idempotent prereq checker; handles PEP 668 externally-managed Python envs; installs npm deps; writes `~/.local/share/applications/octo.desktop`
+- `start.sh --prod` — builds frontend via `npm run build`, serves via `vite preview` at port 5173
+- `vite.config.js` — deduplicated PROXY const; added `preview.proxy` and `preview.port: 5173`
+
+**Alpha docs:**
+- `ALPHA-SHIP.md` — what/install/run/config/known limits/smoke test checklist/release checklist/rollback notes/architecture diagram
+- `CHANGELOG.md` — v0.3.0 entry
+- `frontend/package.json` — version 0.0.0 → 0.3.0
+- `frontend/index.html` — removed hardcoded "uptonogood" from title
+
+**Known packaging limitations documented:**
+- Linux-first (Ubuntu). macOS untested.
+- PEP 668 externally-managed Python → venv workaround documented
+- No AppImage/.deb — install.sh + start.sh IS the alpha packaging
+- Cursor/Dolphin/Konsole specific tools
+
+**Alpha build commands:**
+```bash
+bash install.sh              # first-time setup
+./start.sh                   # dev mode
+./start.sh --prod            # prod mode (build + preview)
+```
+
+**Tests:** 179 frontend + 56 backend — all pass. Build clean.
+
+**Next:** PROMPT 39 — choose: timeline activity enhancements OR semantic clustering / architecture mode
