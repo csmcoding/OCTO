@@ -5,18 +5,19 @@ const LEGEND_ITEMS = [
   { color: '#c8a020', label: 'Active this week'   },
   { color: '#4a9090', label: 'Active this month'  },
   { color: '#e8a020', label: 'Dirty'               },
-  { color: '#555570', label: 'Stale'               },
+  { color: '#555570', label: 'Quiet / stale'       },
 ]
 
-export default function ActivityLegend({ summary, unavailable }) {
+export default function ActivityLegend({ summary, unavailable, colorTheme = 'dark' }) {
+  const isLight = colorTheme === 'light'
   return (
     <div style={{
       position: 'fixed',
       bottom: 210,
       left: 20,
       zIndex: 82,
-      background: 'rgba(18,21,30,0.76)',
-      border: '1px solid rgba(124,157,245,0.12)',
+      background: isLight ? 'rgba(235,242,252,0.92)' : 'rgba(18,21,30,0.76)',
+      border: `1px solid ${isLight ? 'rgba(0,96,128,0.12)' : 'rgba(124,157,245,0.12)'}`,
       borderRadius: 8,
       backdropFilter: 'blur(12px)',
       padding: '8px 12px',
@@ -26,7 +27,7 @@ export default function ActivityLegend({ summary, unavailable }) {
       {unavailable ? (
         <div style={{
           fontFamily: MONO, fontSize: 9,
-          color: 'rgba(180,140,100,0.7)',
+          color: isLight ? 'rgba(100,60,20,0.7)' : 'rgba(180,140,100,0.7)',
           lineHeight: 1.4,
         }}>
           Activity mode requires<br />a git repository
@@ -36,7 +37,7 @@ export default function ActivityLegend({ summary, unavailable }) {
           {summary && (
             <div style={{
               fontFamily: MONO, fontSize: 8,
-              color: 'rgba(160,165,210,0.6)',
+              color: isLight ? 'rgba(30,60,100,0.55)' : 'rgba(160,165,210,0.6)',
               marginBottom: 6,
               lineHeight: 1.5,
               letterSpacing: '0.02em',
@@ -54,7 +55,7 @@ export default function ActivityLegend({ summary, unavailable }) {
               }} />
               <span style={{
                 fontFamily: MONO, fontSize: 9,
-                color: 'rgba(180,185,225,0.65)',
+                color: isLight ? 'rgba(30,60,100,0.7)' : 'rgba(180,185,225,0.65)',
                 letterSpacing: '0.02em',
               }}>{label}</span>
             </div>

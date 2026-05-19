@@ -105,4 +105,30 @@ describe('fuzzySearch', () => {
     const results = fuzzySearch(nodes, 'src')
     expect(results[0].node.type).toBe('folder')
   })
+
+  // 8. activity tie-breaking: hot node ranks above stale node with equal text score
+  it('hot node ranks before stale node when scores are equal and activityIndex provided', () => {
+    const nodes = [
+      file('app', '/a/app'),
+      file('app', '/b/app'),
+    ]
+    const recent = new Date(Date.now() - 1800000).toISOString()  // 30min ago = hot
+    const activityIndex = {
+      '/a/app': { lastCommitAt: null,   isDirty: false, commitCount7d: 0, commitCount30d: 0 },
+      '/b/app': { lastCommitAt: recent, isDirty: false, commitCount7d: 1, commitCount30d: 1 },
+    }
+    const results = fuzzySearch(nodes, 'app', {}, activityIndex)
+    // /b/app is hot, should rank first
+    expect(results[0].node.path).toBe('/b/app')
+  })
+
+  // 9. without activityIndex, tie-breaking falls back to path length
+  it('without activityIndex, equal scores fall back to shorter path', () => {
+    const nodes = [
+      file('app', '/a/longer/app'),
+      file('app', '/b/app'),
+    ]
+    const results = fuzzySearch(nodes, 'app')
+    expect(results[0].node.path).toBe('/b/app')
+  })
 })

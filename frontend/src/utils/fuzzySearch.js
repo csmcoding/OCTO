@@ -1,4 +1,5 @@
 import { getActiveSignals, SIGNAL_LABELS } from './signals.js'
+import { scoreActivity } from './activityAggregate.js'
 
 function isSubsequence(str, query) {
   let qi = 0
@@ -77,8 +78,9 @@ export function scoreNode(node, query, filters = {}) {
 /**
  * Search a flat node array with fuzzy scoring.
  * Returns up to 30 results as { node, score, matchReason }, sorted best-first.
+ * Pass activityIndex (path → item) to break ties toward recently active nodes.
  */
-export function fuzzySearch(nodes, query, filters = {}) {
+export function fuzzySearch(nodes, query, filters = {}, activityIndex = null) {
   const scored = []
 
   for (const node of nodes) {
@@ -89,6 +91,12 @@ export function fuzzySearch(nodes, query, filters = {}) {
 
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score
+    // Activity tie-breaker: surface recently active nodes among equal-score results
+    if (activityIndex) {
+      const aAct = scoreActivity(activityIndex[a.node.path] ?? null)
+      const bAct = scoreActivity(activityIndex[b.node.path] ?? null)
+      if (aAct !== bAct) return bAct - aAct
+    }
     // Folders beat files on equal score
     if (a.node.type !== b.node.type) return a.node.type === 'folder' ? -1 : 1
     // Shorter path first

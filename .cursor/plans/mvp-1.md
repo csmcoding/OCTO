@@ -1092,3 +1092,64 @@ visual layer — scene, particles, lights, grid, fresnel, tentacle, ripple, UI c
 (rimColor, bg prefix, showStars, blending modes, ambientIntensity ratio, colorBoost, uiText)
 
 **Next:** PROMPT 36 (TBD)
+
+---
+
+## PROMPT 36 — Timeline / Activity Layer with Git-Aware Overlays
+**Completed 2026-05-18**
+**Status: COMPLETE**
+
+Activity mode upgraded from a simple toggle/state into a real repo-timeline layer across scene, panel, search, and minimap.
+
+### What changed
+
+**activityAggregate.js — `scoreActivity` helper:**
+- New export: `scoreActivity(item)` → 0-3 intensity score (0=stale, 1=cool, 2=warm, 3=hot/dirty)
+- Used by fuzzySearch tie-breaking and extensible for future visual use
+
+**fuzzySearch.js — activity-aware tie-breaking:**
+- `fuzzySearch(nodes, query, filters, activityIndex?)` — optional 4th param
+- When scores are tied, surfaces recently active nodes ahead of stale ones
+- Preserves all existing textual relevance behavior; folders still beat files at same score
+
+**NodeMesh.jsx — scene activity layer:**
+- `ActivityAura` now accepts `colorTheme` prop; uses `NormalBlending` in light mode (AdditiveBlending on white background = invisible)
+- Stale nodes in activity mode fade to 45% opacity (`isStaleRef` in useFrame) — hot/warm nodes stay full-brightness, making active work discoverable at a glance
+- Selected node always overrides: `isDimmed` path (18%) takes precedence over stale path (45%)
+
+**Minimap.jsx — hotspot rendering:**
+- Accepts `activityMode` and `activityIndex` props
+- When active: draws radial gradient halos before node dots — hot=#ff6b35, warm=#c8a020, cool=#4a9090 at 33% alpha
+- Selected node gets larger halo (r+9 vs r+7) so it stays dominant in dense active regions
+- Fixed missing `colorTheme`, `activityMode`, `activityIndex` in `useEffect` deps (stale closure bug)
+
+**Panel.jsx — readable ActivitySection redesign:**
+- Replaced metadata wall (author/sha/message/7d/30d as individual rows + ActivityStrip bar chart) with:
+  - Status chip: "Active today" / "Active this week" / "Active this month" / "Quiet" + optional "dirty" chip
+  - Compact recency + commit counts side by side ("3 days ago" · "2w · 5mo")
+  - Last commit message (2-line clamp, most useful quick context)
+- "No git data" graceful state when `available: false`
+- Added `LEVEL_DISPLAY` constant mapping level → label + color
+
+**SearchPanel.jsx — activity context in results:**
+- Accepts `activityIndex` prop; passed to `fuzzySearch` for tie-breaking
+- `ResultRow` accepts `activityLevel` prop and renders compact activity badge (today/this week/this month) in teal/amber/slate color scheme
+- Badge appears only for hot/warm/cool nodes; stale nodes stay clean
+- `getActivityLevel` imported from activityAggregate
+
+**ActivityLegend.jsx — colorTheme support:**
+- Accepts `colorTheme` prop; adapts background, border, text for light/dark
+- Updated "Stale" label to "Quiet / stale" to match Panel language
+
+**ThreeScene.jsx — wiring:**
+- `SearchPanel` receives `activityIndex={settings.activityMode ? activityData?.byPath ?? null : null}`
+- `Minimap` receives `activityMode` + `activityIndex`
+- `ActivityLegend` receives `colorTheme`
+
+**Tests:**
+- 7 new `scoreActivity` tests in `activityAggregate.test.js`
+- 2 new `fuzzySearch` tests: activity tie-breaking + fallback behavior
+- Total: 175 frontend tests (was 166), 54 backend tests — all pass
+- Build clean (only pre-existing chunk size warning)
+
+**Next:** PROMPT 37 — desktop utility / context actions (Open in Cursor, Open in Finder/Dolphin, Copy Path, etc.) OR semantic clustering / architecture mode depending on product priority

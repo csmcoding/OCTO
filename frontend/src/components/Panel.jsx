@@ -444,57 +444,88 @@ function ActivityMetaRow({ label, value, pc }) {
   )
 }
 
+const LEVEL_DISPLAY = {
+  hot:   { label: 'Active today',      color: '#ff6b35' },
+  warm:  { label: 'Active this week',  color: '#c8a020' },
+  cool:  { label: 'Active this month', color: '#4a9090' },
+  stale: { label: 'Quiet',             color: null },
+}
+
 function ActivitySection({ activityItem, activityMode, pc }) {
   if (!activityMode) return null
   const display = buildActivityDisplay(activityItem)
 
-  const levelColor = display.level ? (LEVEL_COLORS[display.level] ?? '#888') : '#888'
-  const summaryBg  = display.level ? `${levelColor}22` : 'rgba(80,80,120,0.12)'
+  if (!display.available) {
+    return (
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontFamily: MONO, fontSize: 9, color: pc.textLabel, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 5 }}>
+          Activity
+        </div>
+        <div style={{ fontFamily: MONO, fontSize: 11, color: pc.textMuted }}>No git data</div>
+      </div>
+    )
+  }
+
+  const lvlCfg = LEVEL_DISPLAY[display.level ?? 'stale'] ?? LEVEL_DISPLAY.stale
+  const labelColor = lvlCfg.color ?? pc.textMuted
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{
-        fontFamily: MONO, fontSize: 9,
-        color: pc.textLabel,
-        letterSpacing: '0.1em', textTransform: 'uppercase',
-        marginBottom: 8,
-      }}>
+      <div style={{ fontFamily: MONO, fontSize: 9, color: pc.textLabel, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
         Activity
       </div>
 
-      {!display.available ? (
-        <span style={{ fontFamily: MONO, fontSize: 11, color: pc.textMuted }}>
-          No git activity available
+      {/* Status chips */}
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+        <span style={{
+          fontFamily: MONO, fontSize: 10, fontWeight: 600,
+          color: labelColor,
+          background: lvlCfg.color ? lvlCfg.color + '18' : pc.chipBg,
+          border: `1px solid ${lvlCfg.color ? lvlCfg.color + '40' : pc.sep}`,
+          borderRadius: 4, padding: '2px 8px',
+        }}>
+          {lvlCfg.label}
         </span>
-      ) : (
-        <>
-          {/* Summary chip */}
-          <div style={{
-            display: 'inline-block',
-            fontFamily: MONO, fontSize: 10,
-            color: levelColor,
-            background: summaryBg,
-            border: `1px solid ${levelColor}44`,
-            borderRadius: 4, padding: '2px 7px', marginBottom: 10,
+        {display.isDirty && (
+          <span style={{
+            fontFamily: MONO, fontSize: 10, fontWeight: 600,
+            color: '#e8a020',
+            background: '#e8a02018', border: '1px solid #e8a02040',
+            borderRadius: 4, padding: '2px 7px',
           }}>
-            {display.summary}
+            dirty
+          </span>
+        )}
+      </div>
+
+      {/* Recency + commit counts on one line */}
+      <div style={{ display: 'flex', gap: 18, marginBottom: display.lastCommitMessage ? 8 : 0, flexWrap: 'wrap' }}>
+        {display.lastCommitAt && (
+          <div>
+            <div style={{ fontFamily: MONO, fontSize: 8, color: pc.actLabel, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2 }}>last commit</div>
+            <div style={{ fontFamily: MONO, fontSize: 11, color: pc.actValue }}>{formatAgeDays(display.lastCommitAt)}</div>
           </div>
-
-          {/* Commit metadata */}
-          {display.lastCommitAt && (
-            <div>
-              <ActivityMetaRow label="last commit"  value={formatAgeDays(display.lastCommitAt)} pc={pc} />
-              {display.author            && <ActivityMetaRow label="author"      value={display.author} pc={pc} />}
-              {display.lastCommitSha     && <ActivityMetaRow label="sha"         value={display.lastCommitSha} pc={pc} />}
-              {display.lastCommitMessage && <ActivityMetaRow label="message"     value={display.lastCommitMessage} pc={pc} />}
-              <ActivityMetaRow label="7d commits"  value={display.commitCount7d} pc={pc} />
-              <ActivityMetaRow label="30d commits" value={display.commitCount30d} pc={pc} />
-              {display.isDirty && <ActivityMetaRow label="status" value="dirty — unstaged changes" pc={pc} />}
+        )}
+        {(display.commitCount7d > 0 || display.commitCount30d > 0) && (
+          <div>
+            <div style={{ fontFamily: MONO, fontSize: 8, color: pc.actLabel, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 2 }}>commits</div>
+            <div style={{ fontFamily: MONO, fontSize: 11, color: pc.actValue }}>
+              {display.commitCount7d}w · {display.commitCount30d}mo
             </div>
-          )}
+          </div>
+        )}
+      </div>
 
-          <ActivityStrip display={display} />
-        </>
+      {/* Last commit message — most useful quick context */}
+      {display.lastCommitMessage && (
+        <div style={{
+          fontFamily: MONO, fontSize: 9.5, color: pc.actValue,
+          lineHeight: 1.45, marginTop: 4,
+          overflow: 'hidden', display: '-webkit-box',
+          WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+        }}>
+          {display.lastCommitMessage}
+        </div>
       )}
     </div>
   )
