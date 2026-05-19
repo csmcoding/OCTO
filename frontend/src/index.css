@@ -25,6 +25,16 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+:focus-visible {
+  outline: 2px solid rgba(124,157,245,0.75);
+  outline-offset: 2px;
+}
+button:focus-visible {
+  outline: 2px solid rgba(124,157,245,0.75);
+  outline-offset: 2px;
+  border-radius: inherit;
+}
+
 html, body, #root {
   margin: 0;
   padding: 0;

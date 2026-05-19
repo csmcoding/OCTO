@@ -150,7 +150,7 @@ export default function SettingsPanel({ settings, setSetting, onClose, onRescan 
 
       <div style={{
         position: 'fixed',
-        bottom: 56,
+        bottom: 132,
         left: 20,
         zIndex: 96,
         width: 260,

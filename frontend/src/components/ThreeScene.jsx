@@ -173,18 +173,20 @@ function KeyboardLegend({ colorTheme = 'dark', activityMode = false, archMode = 
   }
 
   return (
-    <div style={{ position: 'fixed', bottom: 56, left: 20, zIndex: 90 }}>
+    <div style={{ position: 'fixed', bottom: 54, left: 20, zIndex: 90 }}>
       <button
         ref={btnRef}
         onClick={handleToggle}
+        aria-label="Keyboard shortcuts"
+        title="Keyboard shortcuts"
         style={{
           background: btnBg,
           border: `1px solid ${btnBorder}`,
           borderRadius: '50%',
-          width: 26, height: 26,
+          width: 32, height: 32,
           color: btnColor,
           fontFamily: "'JetBrains Mono', monospace",
-          fontSize: 12, cursor: 'pointer',
+          fontSize: 13, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
@@ -895,17 +897,17 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         onClick={() => setSettingsOpen(v => !v)}
         style={{
           position: 'fixed',
-          bottom: 84,
+          bottom: 94,
           left: 20,
           zIndex: 90,
-          width: 26, height: 26,
+          width: 32, height: 32,
           borderRadius: '50%',
           background: settingsOpen
             ? (isLight ? 'rgba(0,96,128,0.12)' : 'rgba(124,157,245,0.15)')
             : chromeBg,
           border: `1px solid ${settingsOpen ? chromeHovBdr : chromeBdr}`,
           color: settingsOpen ? chromeHovClr : chromeColor,
-          fontSize: 12, cursor: 'pointer',
+          fontSize: 13, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
@@ -932,15 +934,15 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         }}
         style={{
           position: 'fixed',
-          bottom: 116,
+          bottom: 134,
           left: 20,
           zIndex: 90,
-          width: 26, height: 26,
+          width: 32, height: 32,
           borderRadius: '50%',
           background: chromeBg,
           border: `1px solid ${chromeBdr}`,
           color: chromeColor,
-          fontSize: 12, cursor: 'pointer',
+          fontSize: 13, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
@@ -965,15 +967,15 @@ export default function ThreeScene({ treeData, onLoadingChange, rootPath, onChan
         }}
         style={{
           position: 'fixed',
-          bottom: 148,
+          bottom: 174,
           left: 20,
           zIndex: 90,
-          width: 26, height: 26,
+          width: 32, height: 32,
           borderRadius: '50%',
           background: shareCopied ? (isLight ? 'rgba(0,96,128,0.12)' : 'rgba(78,205,196,0.15)') : chromeBg,
           border: `1px solid ${shareCopied ? (isLight ? 'rgba(0,96,128,0.5)' : 'rgba(78,205,196,0.6)') : chromeBdr}`,
           color: shareCopied ? (isLight ? '#006080' : '#4ecdc4') : chromeColor,
-          fontSize: 11, cursor: 'pointer',
+          fontSize: 12, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'background 0.15s, border-color 0.15s, color 0.15s',
           backdropFilter: 'blur(8px)',
