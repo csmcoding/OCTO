@@ -101,6 +101,45 @@ export function scoreActivity(item) {
 }
 
 /**
+ * Classify commit frequency as a churn label.
+ * Returns 'high churn' | 'steady' | 'light' | null.
+ * null → no commit data available.
+ *
+ * Rules (deterministic, easy to modify):
+ *   high churn : ≥ 5 commits this week OR ≥ 15 commits this month
+ *   steady     : ≥ 2 commits this week OR ≥  5 commits this month
+ *   light      : any commits in the last 30 days
+ *   null       : no commits tracked
+ */
+export function getChurnLabel(item) {
+  if (!item) return null
+  const c7  = item.commitCount7d  ?? 0
+  const c30 = item.commitCount30d ?? 0
+  if (c7 >= 5 || c30 >= 15) return 'high churn'
+  if (c7 >= 2 || c30 >= 5)  return 'steady'
+  if (c30 > 0)               return 'light'
+  return null
+}
+
+/**
+ * Count how many of the visible scene nodes fall into each activity level.
+ * Returns { hot, warm, cool, stale, unknown } counts.
+ */
+export function computeActivityLevelCounts(nodes, activityIndex) {
+  const counts = { hot: 0, warm: 0, cool: 0, stale: 0, unknown: 0 }
+  for (const node of nodes ?? []) {
+    const item = node.type === 'folder'
+      ? aggregateFolderActivity(node, activityIndex)
+      : (activityIndex[node.path] ?? null)
+    if (!item) { counts.unknown++; continue }
+    const level = getActivityLevel(item)
+    if (level && counts[level] !== undefined) counts[level]++
+    else counts.unknown++
+  }
+  return counts
+}
+
+/**
  * Compute a one-line summary for the activity mode banner.
  * Operates on the currently visible layout nodes.
  */

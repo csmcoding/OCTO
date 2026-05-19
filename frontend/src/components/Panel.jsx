@@ -4,7 +4,7 @@ import { getNodeColor } from '../utils/palette'
 import { openNode } from '../utils/loadTree'
 import { useGitDiff } from '../hooks/useGitDiff'
 import { summarizeActivity } from '../utils/loadActivity'
-import { getActivityLevel } from '../utils/activityAggregate'
+import { getActivityLevel, getChurnLabel } from '../utils/activityAggregate'
 import { classifyNode, CLUSTERS } from '../utils/archClassify'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
@@ -369,6 +369,7 @@ export function buildActivityDisplay(activityItem) {
     available:         true,
     summary:           summarizeActivity(activityItem),
     level:             getActivityLevel(activityItem),
+    churnLabel:        getChurnLabel(activityItem),
     lastCommitAt:      activityItem.lastCommitAt,
     lastCommitSha:     activityItem.lastCommitSha,
     lastCommitMessage: activityItem.lastCommitMessage,
@@ -498,6 +499,16 @@ function ActivitySection({ activityItem, activityMode, pc }) {
             borderRadius: 4, padding: '2px 7px',
           }}>
             dirty
+          </span>
+        )}
+        {display.churnLabel && (
+          <span style={{
+            fontFamily: MONO, fontSize: 10, fontWeight: 600,
+            color: 'rgba(180,185,225,0.65)',
+            background: 'rgba(124,157,245,0.08)', border: '1px solid rgba(124,157,245,0.2)',
+            borderRadius: 4, padding: '2px 7px',
+          }}>
+            {display.churnLabel}
           </span>
         )}
       </div>

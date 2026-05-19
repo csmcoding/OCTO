@@ -41,14 +41,15 @@ const ACT_COLORS = { hot: '#ff6b35', warm: '#c8a020', cool: '#4a9090' }
 const ACT_LABELS = { hot: 'today', warm: 'this week', cool: 'this month' }
 
 const CHIPS = [
-  { id: 'all',     label: 'All',     typeFilter: null,     signalFilter: null      },
-  { id: 'folders', label: 'Folders', typeFilter: 'folder', signalFilter: null      },
-  { id: 'files',   label: 'Files',   typeFilter: 'file',   signalFilter: null      },
-  { id: 'signals', label: 'Signals', typeFilter: null,     signalFilter: 'signals' },
-  { id: 'git',     label: 'Git',     typeFilter: null,     signalFilter: 'git'     },
-  { id: 'todo',    label: 'TODO',    typeFilter: null,     signalFilter: 'todo'    },
-  { id: 'large',   label: 'Large',   typeFilter: null,     signalFilter: 'large'   },
-  { id: 'deep',    label: 'Deep',    typeFilter: null,     signalFilter: 'deep'    },
+  { id: 'all',     label: 'All',     typeFilter: null,     signalFilter: null,     activityFilter: null     },
+  { id: 'folders', label: 'Folders', typeFilter: 'folder', signalFilter: null,     activityFilter: null     },
+  { id: 'files',   label: 'Files',   typeFilter: 'file',   signalFilter: null,     activityFilter: null     },
+  { id: 'recent',  label: 'Recent',  typeFilter: null,     signalFilter: null,     activityFilter: 'recent' },
+  { id: 'signals', label: 'Signals', typeFilter: null,     signalFilter: 'signals',activityFilter: null     },
+  { id: 'git',     label: 'Git',     typeFilter: null,     signalFilter: 'git',    activityFilter: null     },
+  { id: 'todo',    label: 'TODO',    typeFilter: null,     signalFilter: 'todo',   activityFilter: null     },
+  { id: 'large',   label: 'Large',   typeFilter: null,     signalFilter: 'large',  activityFilter: null     },
+  { id: 'deep',    label: 'Deep',    typeFilter: null,     signalFilter: 'deep',   activityFilter: null     },
 ]
 
 function relPath(nodePath, rootPath) {
@@ -224,10 +225,11 @@ export default function SearchPanel({
 
   const results = useMemo(() =>
     fuzzySearch(nodes ?? [], query, {
-      typeFilter:   chip.typeFilter,
-      signalFilter: chip.signalFilter,
+      typeFilter:     chip.typeFilter,
+      signalFilter:   chip.signalFilter,
+      activityFilter: chip.activityFilter ?? null,
     }, activityIndex),
-  [nodes, query, chip.typeFilter, chip.signalFilter, activityIndex])
+  [nodes, query, chip.typeFilter, chip.signalFilter, chip.activityFilter, activityIndex])
 
   // Reset selection when results change
   useEffect(() => { setSelectedIdx(0) }, [results])
