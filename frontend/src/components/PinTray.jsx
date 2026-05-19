@@ -67,22 +67,22 @@ export default function PinTray({ pins, onJump, onUnpin }) {
               </span>
             </button>
 
-            {isHov && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onUnpin(node) }}
-                style={{
-                  position: 'absolute', top: -5, right: -5,
-                  width: 14, height: 14, borderRadius: '50%',
-                  background: 'rgba(255,107,107,0.8)',
-                  border: 'none', color: '#fff',
-                  fontSize: 8, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center',
-                  justifyContent: 'center',
-                  lineHeight: 1,
-                  animation: 'fadeIn 0.1s ease',
-                }}
-              >×</button>
-            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onUnpin(node) }}
+              aria-label={`Unpin ${node.name}`}
+              style={{
+                position: 'absolute', top: -6, right: -6,
+                width: 18, height: 18, borderRadius: '50%',
+                background: isHov ? 'rgba(255,107,107,0.9)' : 'rgba(255,107,107,0.3)',
+                border: `1px solid ${isHov ? 'rgba(255,80,80,0.8)' : 'rgba(255,107,107,0.35)'}`,
+                color: '#fff',
+                fontSize: 10, cursor: 'pointer',
+                display: 'flex', alignItems: 'center',
+                justifyContent: 'center',
+                lineHeight: 1,
+                transition: 'background 0.15s, border-color 0.15s',
+              }}
+            >×</button>
           </div>
         )
       })}
