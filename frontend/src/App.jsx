@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Dashboard from './components/Dashboard'
 import Onboarding from './components/Onboarding'
 import BackendError from './components/BackendError'
+import { apiUrl } from './utils/api'
 
 export default function App() {
   const [backendReady, setBackendReady]     = useState(false)
@@ -13,7 +14,7 @@ export default function App() {
 
   const checkBackend = useCallback(async () => {
     try {
-      const res = await fetch('/health')
+      const res = await fetch(apiUrl('/health'))
       if (res.ok) {
         setBackendReady(true)
         setBackendError(false)
@@ -30,7 +31,7 @@ export default function App() {
   // After backend is ready, check whether to skip onboarding
   useEffect(() => {
     if (!backendReady) return
-    fetch('/api/config')
+    fetch(apiUrl('/api/config'))
       .then(r => r.json())
       .then(cfg => {
         if (cfg.rootPath || cfg.hasConfiguredRoots) {
@@ -46,7 +47,7 @@ export default function App() {
   const handleRootSelect = useCallback(async (path) => {
     setTransitioning(true)
     try {
-      await fetch('/api/recents', {
+      await fetch(apiUrl('/api/recents'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path }),

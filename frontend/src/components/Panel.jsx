@@ -6,6 +6,7 @@ import { useGitDiff } from '../hooks/useGitDiff'
 import { summarizeActivity } from '../utils/loadActivity'
 import { getActivityLevel, getChurnLabel } from '../utils/activityAggregate'
 import { classifyNode, CLUSTERS } from '../utils/archClassify'
+import { apiUrl } from '../utils/api'
 
 const MONO = "'JetBrains Mono', 'Fira Mono', monospace"
 const SANS = "'Outfit', 'Inter', system-ui, sans-serif"
@@ -134,7 +135,7 @@ function usePanelPreview(node) {
     }
     let cancelled = false
     setState(s => ({ ...s, loading: true, error: null }))
-    fetch(`/api/preview?path=${encodeURIComponent(node.path)}&lines=20`)
+    fetch(apiUrl(`/api/preview?path=${encodeURIComponent(node.path)}&lines=20`))
       .then(r => r.json())
       .then(data => {
         if (cancelled) return
@@ -224,7 +225,7 @@ function FilePreviewSection({ node, pc }) {
   const handleOpenInEditor = async () => {
     setOpenStatus('opening')
     try {
-      const r = await fetch(`/api/open?path=${encodeURIComponent(node.path)}`)
+      const r = await fetch(apiUrl(`/api/open?path=${encodeURIComponent(node.path)}`))
       const d = await r.json()
       setOpenStatus(d.ok ? 'ok' : 'error')
       setTimeout(() => setOpenStatus('idle'), 2000)

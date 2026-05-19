@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber'
 import { CatmullRomCurve3, Vector3 } from 'three'
 import Tentacle from './Tentacle'
 import { buildTentacleLayout } from '../utils/buildTentacleLayout'
+import { apiUrl } from '../utils/api'
 
 const MONO = "'JetBrains Mono', 'Fira Code', monospace"
 const SANS = "'Outfit', 'Inter', sans-serif"
@@ -83,7 +84,7 @@ export default function Onboarding({ onRootSelect }) {
   const listRef     = useRef(null)
 
   useEffect(() => {
-    fetch('/api/recents')
+    fetch(apiUrl('/api/recents'))
       .then(r => r.json())
       .then(d => setRecents(d.recents ?? []))
       .catch(() => {})
@@ -96,7 +97,7 @@ export default function Onboarding({ onRootSelect }) {
     if (!val.trim()) return
     debounceRef.current = setTimeout(async () => {
       try {
-        const r = await fetch(`/api/validate?path=${encodeURIComponent(val)}`)
+        const r = await fetch(apiUrl(`/api/validate?path=${encodeURIComponent(val)}`))
         setValidation(await r.json())
       } catch {}
     }, 400)
@@ -105,7 +106,7 @@ export default function Onboarding({ onRootSelect }) {
   const fetchBrowse = async (path) => {
     setBrowseLoading(true)
     try {
-      const r = await fetch(`/api/browse?path=${encodeURIComponent(path)}`)
+      const r = await fetch(apiUrl(`/api/browse?path=${encodeURIComponent(path)}`))
       const d = await r.json()
       if (!d.error) { setBrowse(d); setFocusedIdx(0) }
     } catch {}
@@ -117,8 +118,8 @@ export default function Onboarding({ onRootSelect }) {
     setBrowseLoading(true)
     try {
       const url = inputPath.trim()
-        ? `/api/browse?path=${encodeURIComponent(inputPath.trim())}`
-        : '/api/browse'
+        ? apiUrl(`/api/browse?path=${encodeURIComponent(inputPath.trim())}`)
+        : apiUrl('/api/browse')
       const r = await fetch(url)
       const d = await r.json()
       if (!d.error) { setBrowse(d); setFocusedIdx(0) }
