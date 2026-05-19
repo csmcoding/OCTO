@@ -24,6 +24,12 @@ describe('getMenuItems', () => {
     expect(actions).toContain('reveal')
   })
 
+  it('folder menu includes "reveal" action', () => {
+    const items = getMenuItems({ type: 'folder', path: '/some/folder' })
+    const actions = items.filter(i => !i.isDivider).map(i => i.action)
+    expect(actions).toContain('reveal')
+  })
+
   it('both file and folder menus include "copyRelPath" action', () => {
     const fileActions = getMenuItems({ type: 'file', path: '/some/file.js' })
       .filter(i => !i.isDivider).map(i => i.action)

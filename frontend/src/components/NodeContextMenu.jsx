@@ -5,13 +5,14 @@ export function getMenuItems(node) {
   if (!node) return []
   if (node.type === 'folder') {
     return [
-      { label: '⬡  Open in Cursor',        action: 'editor'      },
-      { label: '⬡  Open in Dolphin',        action: 'files'       },
-      { label: '⬡  Open in Konsole',        action: 'terminal'    },
+      { label: '⬡  Open in Cursor',         action: 'editor'      },
+      { label: '⬡  Open in Dolphin',         action: 'files'       },
+      { label: '⬡  Reveal in parent',        action: 'reveal'      },
+      { label: '⬡  Open in Konsole',         action: 'terminal'    },
       { isDivider: true },
-      { label: '⬡  Copy path',              action: 'copyPath'    },
-      { label: '⬡  Copy relative path',     action: 'copyRelPath' },
-      { label: '⬡  Drill into folder',      action: 'drillIn'     },
+      { label: '⬡  Copy path',               action: 'copyPath'    },
+      { label: '⬡  Copy relative path',      action: 'copyRelPath' },
+      { label: '⬡  Drill into folder',       action: 'drillIn'     },
     ]
   }
   return [
