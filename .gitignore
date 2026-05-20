@@ -4,3 +4,7 @@ backend/tests/fixtures/sample_project/clean_repo/
 backend/tree.json
 __pycache__/
 *.pyc
+
+# Editor and AI tool local files
+.cursor/
+CLAUDE.local.md
