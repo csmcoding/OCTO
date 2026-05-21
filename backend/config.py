@@ -4,24 +4,23 @@ from pathlib import Path
 
 SETTINGS_PATH: Path = Path.home() / ".config" / "octopus-dashboard" / "settings.json"
 
+def _default_scan_roots() -> list[str]:
+    home = Path.home()
+    candidates = [home / "projects", home / "Desktop", home / "Documents"]
+    return [str(p) for p in candidates if p.exists()] or [str(home)]
+
+
 _DEFAULTS: dict = {
-    "machine_id": "user",
-    "scan_roots": [
-        "/home/user/projects",
-        "/home/user/Desktop",
-        "/home/user/Documents",
-        "/home/user/.config",
-        "/home/user/.ssh",
-        "/home/user/.cursor",
-    ],
+    "machine_id": os.getenv("USER", "user"),
+    "scan_roots": _default_scan_roots(),
     "active_signals": ["gitDirty", "gitUnpushed", "recentlyModified", "noReadme", "dormant"],
     "signal_priority": ["gitUnpushed", "gitDirty", "noReadme", "recentlyModified", "dormant"],
     "shallow_depth": 2,
     "auto_scan_on_startup": True,
     "dormancy_threshold_days": 60,
-    "editor": "cursor",
-    "terminal": "konsole",
-    "file_manager": "dolphin",
+    "editor": "code",
+    "terminal": "bash",
+    "file_manager": "xdg-open",
 }
 
 SKIP_DIRS: frozenset = frozenset({

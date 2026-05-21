@@ -1,10 +1,20 @@
 backend/tests/fixtures/sample_project/dirty_repo/
 backend/tests/fixtures/sample_project/clean_repo/
 ~/.config/octopus-dashboard/
+
+# Generated scan output — contains local paths
 backend/tree.json
+frontend/public/tree.json
+
+# Python bytecode
 __pycache__/
 *.pyc
 
+# Tauri build artifacts
+frontend/src-tauri/target/
+frontend/src-tauri/gen/
+
 # Editor and AI tool local files
 .cursor/
+.claude/
 CLAUDE.local.md

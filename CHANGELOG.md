@@ -14,7 +14,6 @@
 - Activity legend colorTheme support
 - `requirements.txt` — exact Python dependency versions
 - `install.sh` — prereq checker, dependency installer, desktop entry creator
-- `ALPHA-SHIP.md` — alpha ship checklist and run/install documentation
 - `start.sh --prod` — production mode (builds frontend, serves via vite preview)
 - `vite.config.js` preview proxy — same proxy config for dev and prod modes
 ### Fixed
@@ -28,7 +27,7 @@
 - Backend health check on frontend startup with auto-retry
 - Auto-scan on API server startup (tree ready before first request)
 - HiDPI pixel ratio fix for 2880x1800 display
-- Window title: "octopus — <username>"
+- Window title: "octopus — &lt;username&gt;"
 
 ## [v0.1.0] — 2026-05-17
 ### Added
