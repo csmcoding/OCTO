@@ -1,9 +1,11 @@
 // Prevents console window on Windows in release builds — do not remove
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tauri::Manager;
 
 fn find_project_root() -> PathBuf {
@@ -55,12 +57,25 @@ fn find_backend_binary(resource_dir: &Path) -> Option<PathBuf> {
     candidates.into_iter().find(|p| p.exists())
 }
 
+fn port_is_open(port: u16) -> bool {
+    TcpStream::connect_timeout(
+        &format!("127.0.0.1:{port}").parse().unwrap(),
+        Duration::from_millis(200),
+    )
+    .is_ok()
+}
+
 fn main() {
     let backend: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
     let be_setup = backend.clone();
 
     tauri::Builder::default()
         .setup(move |app| {
+            if port_is_open(7823) {
+                eprintln!("[octo] backend already on port 7823 — skipping spawn");
+                return Ok(());
+            }
+
             let resource_dir = app.path().resource_dir().unwrap_or_default();
 
             let child_result = match find_backend_binary(&resource_dir) {
