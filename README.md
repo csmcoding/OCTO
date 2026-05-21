@@ -120,4 +120,4 @@ Keep changes small, local, and packaging-safe. Avoid broad refactors unless a pa
 
 ## License
 
-Add the repository license here when ready.
+OCTO is licensed under the MIT License. See the `LICENSE` file for the full text.
