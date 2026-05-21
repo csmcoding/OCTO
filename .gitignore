@@ -13,6 +13,10 @@ __pycache__/
 # Tauri build artifacts
 frontend/src-tauri/target/
 frontend/src-tauri/gen/
+frontend/src-tauri/binaries/
+
+# PyInstaller build artifacts
+build/
 
 # Editor and AI tool local files
 .cursor/

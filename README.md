@@ -17,19 +17,7 @@ sudo dpkg -i octopus-dashboard_1.0.0_amd64.deb
 sudo rpm -i octopus-dashboard-1.0.0-1.x86_64.rpm
 ```
 
-**Requirement:** Python 3 with `fastapi` and `uvicorn` must be available on your system.
-
-```bash
-pip install fastapi uvicorn
-# or: pip install -r requirements.txt  (from a repo clone)
-```
-
-**If the app can't find the backend** after install, set `OCTO_ROOT` to the repo directory:
-```bash
-OCTO_ROOT=/path/to/octopus-dashboard octo
-```
-
-The packaged app opens as a native window — no browser required. It auto-starts the Python backend on launch and shuts it down on close.
+The packaged app opens as a native window — no browser required. It auto-starts the bundled backend on launch and shuts it down on close. No Python installation required.
 
 ---
 
@@ -80,7 +68,6 @@ Edit `scan_roots` to point at the directories you want scanned.
 
 - **Linux only.** No Windows or macOS packages are currently built.
 - **AppImage not included.** Excluded due to a linuxdeploy incompatibility on some hosts; `.deb` and `.rpm` are the supported formats.
-- **Python not bundled.** The packaged app shells out to `python3` — FastAPI and uvicorn must be installed separately.
 
 ---
 

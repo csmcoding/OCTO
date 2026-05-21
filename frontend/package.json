@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "build:tauri": "VITE_API_BASE=http://localhost:7823 vite build",
+    "build:tauri": "bash ../scripts/build_backend.sh && VITE_API_BASE=http://localhost:7823 vite build",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },

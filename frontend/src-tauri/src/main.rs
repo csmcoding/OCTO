@@ -1,12 +1,13 @@
 // Prevents console window on Windows in release builds — do not remove
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::{Arc, Mutex};
+use tauri::Manager;
 
 fn find_project_root() -> PathBuf {
-    // 1. Explicit override (useful for packaged installs)
+    // 1. Explicit override (useful for packaged installs without sidecar)
     if let Ok(root) = std::env::var("OCTO_ROOT") {
         let p = PathBuf::from(root);
         if p.join("backend/api.py").exists() {
@@ -31,24 +32,46 @@ fn find_project_root() -> PathBuf {
     std::env::current_dir().unwrap_or_default()
 }
 
+fn find_backend_binary(resource_dir: &Path) -> Option<PathBuf> {
+    let triple = "x86_64-unknown-linux-gnu";
+    let candidates: [PathBuf; 4] = [
+        resource_dir.join(format!("binaries/octo-backend-{triple}")),
+        resource_dir.join("binaries/octo-backend"),
+        resource_dir.join(format!("octo-backend-{triple}")),
+        resource_dir.join("octo-backend"),
+    ];
+    candidates.into_iter().find(|p| p.exists())
+}
+
 fn main() {
     let backend: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
     let be_setup = backend.clone();
 
     tauri::Builder::default()
-        .setup(move |_app| {
-            let root = find_project_root();
-            match Command::new("python3")
-                .args(["-m", "backend.api"])
-                .current_dir(&root)
-                .spawn()
-            {
+        .setup(move |app| {
+            let resource_dir = app.path().resource_dir().unwrap_or_default();
+
+            let child_result = match find_backend_binary(&resource_dir) {
+                Some(binary) => {
+                    eprintln!("[octo] starting sidecar: {binary:?}");
+                    Command::new(&binary).spawn()
+                }
+                None => {
+                    let root = find_project_root();
+                    eprintln!("[octo] sidecar not found — falling back to python3 in {root:?}");
+                    Command::new("python3")
+                        .args(["-m", "backend.api"])
+                        .current_dir(&root)
+                        .spawn()
+                }
+            };
+
+            match child_result {
                 Ok(child) => {
                     *be_setup.lock().unwrap() = Some(child);
                 }
                 Err(e) => {
                     eprintln!("[octo] failed to start backend: {e}");
-                    eprintln!("[octo] root searched: {root:?}");
                     eprintln!("[octo] set OCTO_ROOT=/path/to/octopus-dashboard to override");
                 }
             }
