@@ -22,7 +22,7 @@ OCTO is a desktop-friendly 3D file-architecture dashboard for exploring filesyst
 - Frontend: React, Vite, Three.js.
 - Backend: Python FastAPI.
 - Desktop shell: Tauri v2.
-- Package management: npm for the frontend, Cargo for the Tauri backend shell.
+- Package management: npm for the frontend, Cargo for the Tauri shell.
 
 ## Requirements
 
@@ -32,7 +32,7 @@ OCTO is a desktop-friendly 3D file-architecture dashboard for exploring filesyst
 - Rust toolchain.
 - Linux Tauri system dependencies for local desktop builds.
 
-## Local development
+## Getting started
 
 From the repository root:
 
@@ -41,6 +41,8 @@ cd frontend
 npm install
 npm run dev
 ```
+
+## Local development
 
 The frontend runs in development mode and talks to the local backend during normal app usage.
 
@@ -69,16 +71,16 @@ cd frontend
 npm run tauri:build
 ```
 
+Current Linux release artifacts:
+
+- `frontend/src-tauri/target/release/bundle/deb/octopus-dashboard_1.0.0_amd64.deb`
+- `frontend/src-tauri/target/release/bundle/rpm/octopus-dashboard-1.0.0-1.x86_64.rpm`
+
 On Linux, the current packaged outputs are written under:
 
 ```text
 frontend/src-tauri/target/release/bundle/
 ```
-
-Current Linux release artifacts:
-
-- `frontend/src-tauri/target/release/bundle/deb/octopus-dashboard_1.0.0_amd64.deb`
-- `frontend/src-tauri/target/release/bundle/rpm/octopus-dashboard-1.0.0-1.x86_64.rpm`
 
 ## Backend launch
 
@@ -89,8 +91,8 @@ The Tauri shell starts the local Python backend at runtime. It looks for the pro
 Use GitHub Releases for distributable installers and packaged builds.
 
 - Linux: `.deb` and `.rpm`
-- Windows: `.msi` or `.exe` installer builds from a Windows machine
-- macOS: `.dmg` builds from a macOS machine
+- Windows: planned for Windows builds from a Windows machine
+- macOS: planned for `.dmg` builds from a macOS machine
 
 GitHub Packages is not the right distribution channel for OCTO installers.
 
@@ -98,7 +100,7 @@ GitHub Packages is not the right distribution channel for OCTO installers.
 
 ### Linux
 
-Linux packaging is the primary release path and should be built on Linux with the required native headers installed.
+Linux packaging is implemented and verified on Linux with the required native headers installed.
 
 ### Windows
 
