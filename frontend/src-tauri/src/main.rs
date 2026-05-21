@@ -34,12 +34,24 @@ fn find_project_root() -> PathBuf {
 
 fn find_backend_binary(resource_dir: &Path) -> Option<PathBuf> {
     let triple = "x86_64-unknown-linux-gnu";
-    let candidates: [PathBuf; 4] = [
+
+    // Tauri strips the target triple when packaging (deb/rpm puts the binary
+    // in /usr/bin/ as plain "octo-backend"), so check exe-adjacent first.
+    let exe_dir = std::env::current_exe().ok()
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()));
+
+    let mut candidates: Vec<PathBuf> = vec![
         resource_dir.join(format!("binaries/octo-backend-{triple}")),
         resource_dir.join("binaries/octo-backend"),
         resource_dir.join(format!("octo-backend-{triple}")),
         resource_dir.join("octo-backend"),
     ];
+
+    if let Some(dir) = exe_dir {
+        candidates.push(dir.join(format!("octo-backend-{triple}")));
+        candidates.push(dir.join("octo-backend"));
+    }
+
     candidates.into_iter().find(|p| p.exists())
 }
 
