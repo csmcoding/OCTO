@@ -27,18 +27,25 @@ OCTO scans your filesystem and renders every repository and folder as a glowing 
 <table>
 <tr>
 <td align="center" width="50%">
-<img src="docs/images/light-theme.png" alt="Full scene, light theme" width="100%"><br>
-<sub><b>Light theme</b> — the full radial graph across all your projects. Red nodes are git-dirty or unpushed; violet nodes are clean.</sub>
+<img src="docs/images/activity-mode.png" alt="Activity mode" width="100%"><br>
+<sub><b>Activity mode</b> — commit heatmap colors nodes by recency. Hot repos glow gold; dormant ones fade. Halos pulse on recently active folders.</sub>
 </td>
 <td align="center" width="50%">
-<img src="docs/images/overview.png" alt="Dark theme overview" width="100%"><br>
-<sub><b>Dark theme</b> — default view with star-field background, animated tentacle lines, and the minimap in the corner.</sub>
+<img src="docs/images/architecture-mode.png" alt="Architecture mode" width="100%"><br>
+<sub><b>Architecture mode</b> — 9 semantic cluster categories with distinct colors. Backend, frontend, tests, config, docs, and more, visible at a glance.</sub>
+</td>
+</tr>
+<tr>
+<td align="center" width="50%">
+<img src="docs/images/search.png" alt="Fuzzy search" width="100%"><br>
+<sub><b>Fuzzy search</b> — <code>Ctrl+K</code> searches all nodes instantly, with type badges, activity indicators, and keyboard navigation.</sub>
+</td>
+<td align="center" width="50%">
+<img src="docs/images/light-theme.png" alt="Light theme" width="100%"><br>
+<sub><b>Light theme</b> — "Future Glass" — full radial graph with pearl background. Red nodes are dirty or unpushed; violet are clean.</sub>
 </td>
 </tr>
 </table>
-
-![Onboarding — choose your root directory](docs/images/onboarding.png)
-*First launch — paste a path or browse to pick the root directory you want to visualize.*
 
 ---
 
