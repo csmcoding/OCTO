@@ -4,7 +4,7 @@ A local Linux desktop app that visualizes your project directories as an interac
 
 ## Install from GitHub Releases
 
-The latest packaged release is **[v1.1.0](https://github.com/csmcoding/OCTO/releases/tag/v1.1.0)**.
+The latest packaged release is **[v1.1.1](https://github.com/csmcoding/OCTO/releases/tag/v1.1.1)**.
 Download the installer for your distro from the release page.
 
 **Ubuntu / Debian**
